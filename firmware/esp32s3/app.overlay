@@ -1,0 +1,71 @@
+/*
+ * Device Tree Overlay for Seeed Studio XIAO ESP32-S3 Sense
+ * I2S Microphone Pin Configuration (3-wire I2S RX Stream: BCK, SD, WS)
+ */
+
+#include <zephyr/dt-bindings/pinctrl/esp32s3-pinctrl.h>
+
+/ {
+	aliases {
+		i2s-mic = &i2s0;
+		sync-ap = &sync_ap_pin;
+		sync-inf = &sync_inf_pin;
+	};
+	chosen {
+		/delete-property/ zephyr,camera;
+	};
+
+	debug_pins {
+		compatible = "gpio-keys";
+		sync_ap_pin: sync_ap_pin {
+			gpios = <&gpio0 2 GPIO_ACTIVE_HIGH>; /* GPIO2 (Pin D1) */
+			label = "Audio Processing Sync Pin";
+		};
+		sync_inf_pin: sync_inf_pin {
+			gpios = <&gpio0 3 GPIO_ACTIVE_HIGH>; /* GPIO3 (Pin D2) */
+			label = "Inference Sync Pin";
+		};
+	};
+};
+
+&i2c1 {
+	status = "disabled";
+};
+
+&lcd_cam {
+	status = "disabled";
+};
+
+&lcd_cam_dvp {
+	status = "disabled";
+};
+
+
+&pinctrl {
+	i2s0_default: i2s0_default {
+		group1 {
+			pinmux =
+				 <I2S0_I_WS_GPIO42>,
+				 <I2S0_I_SD_GPIO41>;
+		};
+	};
+};
+
+&i2s0 {
+	status = "okay";
+	pinctrl-0 = <&i2s0_default>;
+	pinctrl-names = "default";
+};
+
+&uart0 {
+	status = "okay";
+	current-speed = <921600>;
+};
+
+&cpu0 {
+	clock-frequency = <160000000>;
+};
+
+&cpu1 {
+	clock-frequency = <160000000>;
+};

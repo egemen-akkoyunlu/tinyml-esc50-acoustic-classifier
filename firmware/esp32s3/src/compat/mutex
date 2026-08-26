@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) 2026 Seeed Studio / Senior ML Engineer
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Zephyr C++ compatibility wrapper for <mutex>.
+ * Embedded C++ toolchains without POSIX threads often disable std::mutex.
+ * This wrapper transparently maps std::mutex and std::lock_guard to Zephyr's k_mutex.
+ */
+
+#pragma once
+
+#include <zephyr/kernel.h>
+
+namespace std {
+    class mutex {
+    private:
+        struct k_mutex m_kmutex;
+    public:
+        mutex() {
+            k_mutex_init(&m_kmutex);
+        }
+        ~mutex() {}
+        void lock() {
+            k_mutex_lock(&m_kmutex, K_FOREVER);
+        }
+        void unlock() {
+            k_mutex_unlock(&m_kmutex);
+        }
+        bool try_lock() {
+            return (k_mutex_lock(&m_kmutex, K_NO_WAIT) == 0);
+        }
+    };
+
+    template <typename M>
+    class lock_guard {
+    private:
+        M& m_mutex;
+    public:
+        explicit lock_guard(M& m) : m_mutex(m) { m_mutex.lock(); }
+        ~lock_guard() { m_mutex.unlock(); }
+        lock_guard(const lock_guard&) = delete;
+        lock_guard& operator=(const lock_guard&) = delete;
+    };
+}

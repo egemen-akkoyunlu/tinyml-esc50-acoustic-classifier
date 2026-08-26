@@ -1,0 +1,60 @@
+/*
+ * STRATEJI:
+ * - USART0: Zephyr surucusu DEVRE DISI. EMLIB tarafindan I2S (mikrofon) icin kullanilir.
+ * - EUSART0: Zephyr UART konsol surucusu AKTIF. PA5(TX)/PA6(RX) = VCOM pinleri.
+ * - Mikrofon I2S pinleri (PD3/PD4/PD5) audio.c icerisinde EMLIB ile dogrudan yapilandirilir.
+ */
+
+#include <dt-bindings/pinctrl/silabs/xg24-pinctrl.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <silabs/xg24/clock-hfrcodpll.dtsi>
+
+/ {
+    chosen {
+        /* Konsol artik EUSART0 uzerinden */
+        zephyr,console = &eusart0;
+        zephyr,shell-uart = &eusart0;
+    };
+
+    /* DATASHEET ONAYLI DONANIMSAL ANAHTAR (PC08/PC09) */
+    mic_power: mic_power {
+        compatible = "regulator-fixed";
+        regulator-name = "mic_power";
+        
+        /* PC08 High yapilarak multiplexer aciliyor ve mikrofonlar islemciye baglaniyor */
+        enable-gpios = <&gpioc 8 GPIO_ACTIVE_HIGH>;
+        regulator-always-on; 
+    };
+};
+
+/* USART0: Zephyr surucusunu TAMAMEN kapat. 
+ * EMLIB/audio.c bunu I2S olarak dogrudan yapilandiracak. */
+&usart0 {
+    status = "disabled";
+};
+
+/* EUSART0: UART Konsol Surucusu (PA5=TX, PA6=RX -> VCOM) */
+&eusart0 {
+    compatible = "silabs,eusart-uart";
+    current-speed = <115200>;
+    pinctrl-0 = <&eusart0_default>;
+    pinctrl-names = "default";
+    status = "okay";
+};
+
+/* Pin Yapilandirmasi */
+&pinctrl {
+    /* EUSART0 Konsol Pinleri (VCOM'a baglanir) */
+    eusart0_default: eusart0_default {
+        group0 {
+            pins = <EUSART0_TX_PA5>;
+            drive-push-pull;
+            output-high;
+        };
+        group1 {
+            pins = <EUSART0_RX_PA6>;
+            input-enable;
+            silabs,input-filter;
+        };
+    };
+};

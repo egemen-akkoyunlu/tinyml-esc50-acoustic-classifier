@@ -1,0 +1,25 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual Environments
+.venv/
+env/
+venv/
+kws_env/
+
+# Datasets & Temp Audio Downloads
+ESC-50/
+ESC-50-master/
+*.wav
+*.mp3
+
+# Build Directories (Zephyr RTOS & CMake)
+build/
+twister-out/
+.cache/
+
+# OS specific files
+.DS_Store
+Thumbs.db
