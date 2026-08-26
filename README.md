@@ -178,14 +178,27 @@ python export/export_golden_keyboard_pcm.py
 ### 4. Build & Flash Firmware
 
 #### 👑 Option A: Espressif ESP32-S3 Sense (Seeed Studio XIAO)
-```bash
-cd firmware/esp32s3
-west build -p always -b xiao_esp32s3/esp32s3/procpu/sense
-west flash
-west espressif monitor
-```
+
+> 💡 **ESP-DL on Zephyr Compatibility Layer:**  
+> Espressif's ESP-DL library natively targets ESP-IDF. This repository includes a custom **Zephyr-to-ESP-IDF compatibility shim layer** (`firmware/esp32s3/src/compat/`) that maps FreeRTOS mutexes, heap management, and hardware timers directly to Zephyr RTOS primitives without requiring the full ESP-IDF framework.
+
+1. **(One-time setup) Clone the official ESP-DL library:**
+   ```bash
+   git clone https://github.com/espressif/esp-dl.git firmware/esp32s3/esp-dl
+   ```
+
+2. **Build and flash using Zephyr `west`:**
+   ```bash
+   cd firmware/esp32s3
+   west build -p always -b xiao_esp32s3/esp32s3/procpu/sense
+   west flash
+   west espressif monitor
+   ```
 
 #### 👑 Option B: Silicon Labs EFR32MG24 (xG24-DK2601B)
+
+The EFR32MG24 firmware compiles natively using Zephyr's built-in CMSIS-DSP and standard C++ FPU math with **zero external library dependencies**:
+
 ```bash
 cd firmware/efr32mg24
 west build -p always -b xg24_dk2601b
