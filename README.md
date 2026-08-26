@@ -6,6 +6,7 @@
 [![Accuracy](https://img.shields.io/badge/ESC--50_Validation-91.00%25-brightgreen.svg)]()
 [![Hardware-ESP32-S3](https://img.shields.io/badge/ESP32--S3-161_mW_%7C_450_ms-blue.svg)]()
 [![Hardware-EFR32MG24](https://img.shields.io/badge/EFR32MG24-Cortex--M33_%7C_35_KB_RAM-orange.svg)]()
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/)
 
 ---
 
@@ -23,7 +24,7 @@ This repository contains the complete research, training pipeline, and embedded 
 
 ## 📊 Dual-Platform Hardware Benchmarks
 
-Measured on physical hardware using continuous microphone audio streams and **Otii Arc Pro** high-precision power analyzer:
+Measured on physical hardware using continuous microphone audio streams:
 
 | Metric | Espressif ESP32-S3 Sense | Silicon Labs EFR32MG24 (xG24-DK2601B) |
 | :--- | :--- | :--- |
@@ -32,12 +33,14 @@ Measured on physical hardware using continuous microphone audio streams and **Ot
 | **Quantization Scheme** | 100% Monolithic Full-Integer INT8 | 2-Stage Hybrid (INT8 CNN + FPU GRU) |
 | **Total ML Inference Time** | **`450.50 ms`** | **`731.90 ms`** |
 | **DSP Feature Extraction** | **`4.38 ms`** (ESP-DL Fbank) | **`54.11 ms`** (CMSIS-DSP) |
-| **Sustained Active Current** | **`43.5 mA`** (@ 3.3V) | **`~10 - 12 mA`** (@ 3.3V) |
-| **Sustained Active Power** | **`161 mW`** (Otii Arc Pro) | **`~35 - 40 mW`** |
-| **Energy per Inference** | **`72.4 mJ`** | **`~25.0 mJ`** |
+| **Sustained Active Current** | **`43.5 mA`** (@ 3.3V, Otii Arc Pro) | **`-`** *(Not measured)* |
+| **Sustained Active Power** | **`161 mW`** (Otii Arc Pro) | **`-`** *(Not measured)* |
+| **Energy per Inference** | **`72.4 mJ`** | **`-`** *(Not measured)* |
 | **Active Working SRAM** | `378 KB DRAM / 5 MB PSRAM` | **`172 KB Arena + 35 KB FPU`** |
 | **Model Flash Binary** | **`146.8 KB`** (`model.espdl`) | **`14.6 KB CNN + 480 KB Weights`** |
-| **Live Mic Peak Confidence** | **`92.0%`** (`keyboard typing`) | **`81.0%`** (`keyboard typing`) |
+| **Live Mic Peak Confidence** | **`92.0%`** (`keyboard typing` sustained) | **`81.0%`** *(Peak in continuous baseline)* <sup>*</sup> |
+
+> <sup>*</sup> *Note on EFR32MG24:* 81.0% peak confidence was achieved during early continuous typing baseline evaluations. Onboard digital I2S microphone dynamic range and AGC tuning are subject to ongoing experimentation. Power profiling on EFR32MG24 is planned.
 
 ---
 
@@ -75,7 +78,7 @@ Measured on physical hardware using continuous microphone audio streams and **Ot
 
 Evaluated on all 400 test clips across the 50 ESC-50 classes:
 
-![Confusion Matrix](confusion_matrix_esc50_91.png)
+![Confusion Matrix](models/confusion_matrix_esc50_91.png)
 
 * **Overall Accuracy:** **91.00%** (364 / 400 correct classifications).
 * **26 Classes:** **100.0% Perfect Accuracy** (8/8 clips correct).
@@ -88,35 +91,31 @@ Evaluated on all 400 test clips across the 50 ESC-50 classes:
 ```text
 ├── models/
 │   ├── best_distilled_qat_model.pth        # 91.00% PyTorch Checkpoint (~500 KB)
-│   └── model.espdl                         # Monolithic INT8 ESP-DL Binary (~146.9 KB)
+│   └── confusion_matrix_esc50_91.png       # 50x50 Evaluation Matrix
+│
+├── training/
+│   ├── qat_training.py                     # Step 1: Base QAT Training Pipeline
+│   ├── train_distill_91_colab.py           # Step 2: ResNet-34 Knowledge Distillation
+│   ├── train_distill_91_colab.ipynb        # Step 2: Interactive Google Colab Notebook
+│   └── generate_confusion_matrix.py        # Validation & Matrix Plotter
 │
 ├── export/
 │   ├── quantize_esc50_to_espdl.py          # ESP-PPQ Quantizer for ESP32-S3
 │   ├── export_clean_cnn_int8.py            # TFLM INT8 Header Generator for EFR32
-│   └── export_golden_keyboard_pcm.py       # Bit-Exact Validation Audio Exporter
+│   ├── export_golden_keyboard_pcm.py       # Bit-Exact Validation Audio Exporter
+│   └── simulate_onchip_inference.py        # Bit-Exact CPU Simulator
 │
-├── training/
-│   ├── train_distill_91_colab.py           # ResNet-34 Knowledge Distillation Script
-│   └── qat_training.py                     # Quantization-Aware Fine-Tuning
-│
-├── zephyr_esc/                             # ESP32-S3 Firmware (ESP-DL + Zephyr RTOS)
-│   ├── CMakeLists.txt
-│   ├── prj.conf
-│   ├── app.overlay
-│   └── src/
-│       ├── main.cpp
-│       ├── inference.cpp / inference.hpp
-│       ├── audio_preprocessing.cpp
-│       └── model.espdl
-│
-├── silabs_ble_audio_peripheral/            # EFR32MG24 Firmware (TFLM + CMSIS-NN)
-│   ├── CMakeLists.txt
-│   ├── prj.conf
-│   └── src/
-│       ├── main.cpp
-│       ├── inference.cpp
-│       ├── audio_preprocessing.c
-│       └── gru_classifier_weights.h
+├── firmware/
+│   ├── esp32s3/                            # Seeed Studio XIAO ESP32-S3 Sense Project
+│   │   ├── CMakeLists.txt
+│   │   ├── prj.conf
+│   │   ├── app.overlay
+│   │   └── src/ (main.cpp, inference.cpp, audio_preprocessing.cpp, model.espdl)
+│   │
+│   └── efr32mg24/                          # Silicon Labs xG24-DK2601B Project
+│       ├── CMakeLists.txt
+│       ├── prj.conf
+│       └── src/ (main.cpp, inference.cpp, audio_preprocessing.c, weights.h)
 │
 ├── requirements.txt                        # Python Dependencies
 ├── .gitignore                              # Clean Repository Filters
@@ -125,34 +124,70 @@ Evaluated on all 400 test clips across the 50 ESC-50 classes:
 
 ---
 
-## 🚀 Quick Start Guide
+## 🚀 Step-by-Step Reproduction Guide
 
-### 1. Python Environment Setup
+### 1. Environment & Dataset Setup
 ```bash
-git clone https://github.com/<your-username>/tinyml-esc50-acoustic-classifier.git
+git clone https://github.com/egemen-akkoyunlu/tinyml-esc50-acoustic-classifier.git
 cd tinyml-esc50-acoustic-classifier
 pip install -r requirements.txt
+
+# Download and extract the ESC-50 dataset
+wget https://github.com/karolpiczak/ESC-50/archive/master.zip
+unzip master.zip
 ```
 
-### 2. Export / Quantize Model for ESP32-S3
+### 2. Model Training & Knowledge Distillation
+The training pipeline consists of two phases:
+
+1. **Phase 1 (Local Base Training):**  
+   Train the initial PhiNet-CRNN model with Quantization-Aware Training (QAT):
+   ```bash
+   python training/qat_training.py
+   ```
+
+2. **Phase 2 (Cloud Distillation on GPU):**  
+   Upload `training/train_distill_91_colab.py` or open [`training/train_distill_91_colab.ipynb`](training/train_distill_91_colab.ipynb) in **Google Colab** with a GPU runtime to distill knowledge from a pre-trained ResNet-34 teacher into the 124.9k student. This generates `best_distilled_qat_model.pth` (**91.00% Validation Accuracy**). Move the downloaded checkpoint to `models/best_distilled_qat_model.pth`.
+
+### 3. Target-Specific Model Export & Quantization
+
+Because ESP32-S3 and EFR32MG24 use different embedded acceleration engines, export follows target-specific pipelines:
+
+#### 🔹 For Espressif ESP32-S3 (Monolithic 100% INT8 ESP-DL):
+Quantizes the full model into a single binary accelerated by the 128-bit Xtensa PIE SIMD vector engine:
 ```bash
 python export/quantize_esc50_to_espdl.py
+# Outputs: firmware/esp32s3/src/model.espdl (146.8 KB)
 ```
 
-### 3. Build & Flash ESP32-S3 Firmware (Seeed XIAO Sense)
+#### 🔹 For Silicon Labs EFR32MG24 (2-Stage Hybrid TFLM + Cortex-M33 FPU):
+Splits the model into an INT8 2D CNN backbone for TFLite Micro and a hardware FPU-accelerated GRU classifier:
 ```bash
-cd zephyr_esc
-west build -b xiao_esp32s3 -p auto
-west flash
-minicom -D /dev/ttyACM0 -b 115200
+# 1. Export INT8 CNN Backbone to C Byte Array Header for TFLite Micro
+python export/export_clean_cnn_int8.py
+# Outputs: firmware/efr32mg24/src/phinet_features_model_data.h
+
+# 2. (Optional) Export Golden Verification Audio Header
+python export/export_golden_keyboard_pcm.py
+# Outputs: firmware/efr32mg24/src/golden_keyboard_typing_pcm.h
 ```
 
-### 4. Build & Flash EFR32MG24 Firmware (Silicon Labs xG24)
+### 4. Build & Flash Firmware
+
+#### 👑 Option A: Espressif ESP32-S3 Sense (Seeed Studio XIAO)
 ```bash
-cd ../silabs_ble_audio_peripheral
-west build -b xg24_dk2601b -p auto
+cd firmware/esp32s3
+west build -p always -b xiao_esp32s3/esp32s3/procpu/sense
 west flash
-minicom -D /dev/ttyACM0 -b 115200
+west espressif monitor
+```
+
+#### 👑 Option B: Silicon Labs EFR32MG24 (xG24-DK2601B)
+```bash
+cd firmware/efr32mg24
+west build -p always -b xg24_dk2601b
+west flash
+screen /dev/ttyACM* 115200
 ```
 
 ---
