@@ -19,10 +19,15 @@ import sys
 import numpy as np
 import tensorflow as tf
 
-ROOT_DIR = "/home/acar/new_task"
+CURR_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.abspath(os.path.join(CURR_DIR, "..")) if os.path.basename(CURR_DIR) in ["export", "training"] else CURR_DIR
+
 WEIGHTS_NPZ = os.path.join(ROOT_DIR, "cnn_qat_converted_weights.npz")
 OUT_TFLITE = os.path.join(ROOT_DIR, "tflite_models", "cnn_backbone_out", "cnn_backbone_full_integer_quant.tflite")
-HEADER_PATH = "/home/acar/zephyrproject/my_apps/silabs_ble_audio_peripheral/src/phinet_features_model_data.h"
+
+HEADER_PATH = os.path.join(ROOT_DIR, "firmware", "efr32mg24", "src", "phinet_features_model_data.h")
+if not os.path.exists(os.path.dirname(HEADER_PATH)):
+    HEADER_PATH = "/home/acar/zephyrproject/my_apps/silabs_ble_audio_peripheral/src/phinet_features_model_data.h"
 
 print("=" * 80)
 print("🚀 STEP 1: LOADING FOLDED WEIGHTS FROM NUMPY NPZ")

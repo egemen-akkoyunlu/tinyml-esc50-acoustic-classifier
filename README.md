@@ -31,6 +31,9 @@ Measured on physical hardware using continuous microphone audio streams:
 | **Processor Architecture** | Xtensa LX7 Dual-Core @ 160 MHz | ARM Cortex-M33 @ 78 MHz |
 | **Hardware Acceleration** | Xtensa PIE (128-bit SIMD Vector Engine) | CMSIS-NN / MVP + Single-Cycle FPU |
 | **Quantization Scheme** | 100% Monolithic Full-Integer INT8 | 2-Stage Hybrid (INT8 CNN + FPU GRU) |
+| **Pre-Quant PyTorch QAT Accuracy** | **`91.00%`** (364 / 400 test clips) | **`91.00%`** (364 / 400 test clips) |
+| **Post-Quantization On-Chip Accuracy** | **`89.00%`** (356 / 400 test clips) | **`90.25%`** (361 / 400 test clips) |
+| **Quantization Accuracy Drop** | **`-2.00%`** *(Full-Integer INT8)* | **`-0.75%`** *(Hybrid INT8 + FPU)* |
 | **Total ML Inference Time** | **`450.50 ms`** | **`731.90 ms`** |
 | **DSP Feature Extraction** | **`4.38 ms`** (ESP-DL Fbank) | **`54.11 ms`** (CMSIS-DSP) |
 | **Sustained Active Current** | **`43.5 mA`** (@ 3.3V, Otii Arc Pro) | **`-`** *(Not measured)* |
