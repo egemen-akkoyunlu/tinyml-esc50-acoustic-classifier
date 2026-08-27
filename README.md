@@ -76,25 +76,9 @@ Measured directly on physical edge hardware across live audio streams and held-o
 
 ---
 
-## 🎛️ Dual Deployment Profiles: High-Precision vs. Ultra-Compressed CSR
-
-To support different hardware memory tiers, this repository features a compile-time profile selector in [`config.h`](firmware/efr32mg24/src/config.h):
-
-| Metric | 🏆 Profile 1: **Flagship Dense Model** | ⚡ Profile 2: **Sparse Pruned CSR Model** |
-| :--- | :--- | :--- |
-| **Model Type** | 124.9k Dense Distilled Architecture | **`48.9k Active Non-Zeros`** (61.0% Sparsity / 77k Zeros) |
-| **Execution Kernel** | Dense SIMD FPU Loops (`#pragma GCC unroll 8`) | **Branchless CSR Zero-Skipping (`sparse_matvec_mult`)** |
-| **Held-Out Validation Accuracy** | **`90.50%`** (362 / 400 test clips) | **`88.50%`** (354 / 400 test clips) 🌟 |
-| **Flash Memory Usage** | `866 KB (55% of Flash)` | **`607 KB (38% of Flash)`** 💾 *(**-258.4 KB Reclaimed!**)* |
-| **Active Working SRAM** | `86.7%` *(with 33.8 KB Union Pool)* | `86.7%` *(with 33.8 KB Union Pool)* |
-| **Stage 2 GRU Latency (Cortex-M33)** | `490.45 ms` | **`344.45 ms`** ⚡ *(**-146.0 ms Faster!**)* |
-| **Total ML Inference Time** | `764.68 ms` | **`618.13 ms`** |
-| **Live Microphone Confidence** | **`80.4%`** (`keyboard typing` peak) | **`75.2%`** (`keyboard typing` sustained) |
-| **Target Hardware** | High-performance MCUs (1MB+ Flash) | Memory & Power Constrained Nodes (<512KB Flash) |
-
----
-
 ## ⚡ Compressed Sparse Row (CSR) Hardware Zero-Skipping
+
+To support different microcontroller memory tiers, this repository features a compile-time profile selector in [`config.h`](firmware/efr32mg24/src/config.h) (`PROFILE_FLAGSHIP_DENSE_91` vs `PROFILE_SPARSE_PRUNED_48K`).
 
 On the Silicon Labs EFR32MG24 (ARM Cortex-M33 @ 78 MHz), Profile 2 uses custom **Compressed Sparse Row (CSR)** encoding (`SPARSE_WEIGHTS`, `COL_INDICES`, `ROW_OFFSETS`). 
 
