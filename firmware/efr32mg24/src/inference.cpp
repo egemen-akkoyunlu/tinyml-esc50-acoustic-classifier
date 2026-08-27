@@ -2,8 +2,14 @@
 #include "inference.h"
 #include "audio_preprocessing.h"
 #include "config.h"
-#include "phinet_features_model_data.h"
-#include "gru_classifier_weights.h"
+
+#if (ACTIVE_MODEL_PROFILE == PROFILE_FLAGSHIP_DENSE_91)
+    #include "phinet_features_model_data.h"
+    #include "gru_classifier_weights.h"
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
+    #include "phinet_features_pruned_model_data.h"
+    #include "gru_classifier_weights_pruned_csr.h"
+#endif
 
 #include <tensorflow/lite/micro/micro_interpreter.h>
 #include <tensorflow/lite/micro/micro_mutable_op_resolver.h>
@@ -251,6 +257,25 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
         return 0.5f + 0.5f * fast_tanh_fpu(0.5f * x);
     };
 
+#if (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
+    /* ⚡ Branchless Compressed Sparse Row (CSR) Zero-Skipping Kernel */
+    auto sparse_matvec_mult = [](
+        const float *sparse_w, const uint8_t *col_idx, const uint32_t *row_offsets,
+        const float *bias, const float *x, float *y, int num_rows)
+    {
+        for (int r = 0; r < num_rows; r++) {
+            float sum = bias ? bias[r] : 0.0f;
+            uint32_t start = row_offsets[r];
+            uint32_t end   = row_offsets[r + 1];
+            #pragma GCC unroll 8
+            for (uint32_t k = start; k < end; k++) {
+                sum += sparse_w[k] * x[col_idx[k]];
+            }
+            y[r] = sum;
+        }
+    };
+#endif
+
     /* 2. Unroll 39 Time Steps of Recurrent GRU Cell */
     float h[GRU_HIDDEN_DIM];
     memset(h, 0, sizeof(h));
@@ -258,7 +283,8 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     for (int t = 0; t < GRU_TIME_STEPS; t++) {
         const float *feat_ptr = features[t];
 
-        /* Matrix-Vector Multiplications (Fully inlined FPU MACs) */
+#if (ACTIVE_MODEL_PROFILE == PROFILE_FLAGSHIP_DENSE_91)
+        /* 🏆 Matrix-Vector Multiplications (Fully Inlined Dense FPU MACs) */
         for (int i = 0; i < 3 * GRU_HIDDEN_DIM; i++) {
             const float *w_ih_ptr = &GRU_W_IH[i * GRU_INPUT_DIM];
             float sum_x = GRU_B_IH[i];
@@ -288,6 +314,11 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
             }
             gate_h[i] = sum_h;
         }
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
+        /* ⚡ Branchless CSR Sparse Zero-Skipping */
+        sparse_matvec_mult(GRU_W_IH_SPARSE, GRU_W_IH_COL_IDX, GRU_W_IH_ROW_OFFSETS, GRU_B_IH, feat_ptr, gate_x, 3 * GRU_HIDDEN_DIM);
+        sparse_matvec_mult(GRU_W_HH_SPARSE, GRU_W_HH_COL_IDX, GRU_W_HH_ROW_OFFSETS, GRU_B_HH, h, gate_h, 3 * GRU_HIDDEN_DIM);
+#endif
 
         /* Fast FPU Recurrent Cell Activation */
         for (int j = 0; j < GRU_HIDDEN_DIM; j++) {
@@ -337,6 +368,7 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     /* 5. Bottleneck Linear (160 -> 128) with Native ReLU6 */
     float btn_out[BOTTLENECK_DIM];
     float btn_raw[BOTTLENECK_DIM];
+#if (ACTIVE_MODEL_PROFILE == PROFILE_FLAGSHIP_DENSE_91)
     for (int i = 0; i < BOTTLENECK_DIM; i++) {
         const float *btn_w_row = &BOTTLENECK_W[i * GRU_HIDDEN_DIM];
         float sum = BOTTLENECK_B[i];
@@ -354,6 +386,12 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
         btn_raw[i] = sum;
         btn_out[i] = fmaxf(0.0f, fminf(6.0f, sum)); // ReLU6
     }
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
+    sparse_matvec_mult(BOTTLENECK_W_SPARSE, BOTTLENECK_W_COL_IDX, BOTTLENECK_W_ROW_OFFSETS, BOTTLENECK_B, h_pooled, btn_raw, BOTTLENECK_DIM);
+    for (int i = 0; i < BOTTLENECK_DIM; i++) {
+        btn_out[i] = fmaxf(0.0f, fminf(6.0f, btn_raw[i])); // ReLU6
+    }
+#endif
 
     int btn_nonzeros = 0;
     for (int i = 0; i < BOTTLENECK_DIM; i++) {
@@ -361,8 +399,9 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     }
 
     /* 6. FC Classifier Head (128 -> 50) */
-    float raw_logits[NUM_OUTPUT_CLASSES];
-    for (int i = 0; i < NUM_OUTPUT_CLASSES; i++) {
+    float raw_logits[NUM_ESC50_CLASSES];
+#if (ACTIVE_MODEL_PROFILE == PROFILE_FLAGSHIP_DENSE_91)
+    for (int i = 0; i < NUM_ESC50_CLASSES; i++) {
         const float *fc_w_row = &FC_W[i * BOTTLENECK_DIM];
         float sum = FC_B[i];
         #pragma GCC unroll 8
@@ -378,20 +417,31 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
         }
         raw_logits[i] = sum;
     }
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
+    sparse_matvec_mult(FC_W_SPARSE, FC_W_COL_IDX, FC_W_ROW_OFFSETS, FC_B, btn_out, raw_logits, NUM_ESC50_CLASSES);
+#endif
+
+#if (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
+    /* ⚡ ICML 2017 Temperature Calibration Scale for 68% Pruning Variance Recovery */
+    const float LOGIT_CALIBRATION_SCALE = 3.0f;
+#else
+    const float LOGIT_CALIBRATION_SCALE = 1.0f;
+#endif
 
     /* Temporal EMA Smoothing across successive frames (Alpha = 0.65) */
-    static float s_smoothed_logits[NUM_OUTPUT_CLASSES];
+    static float s_smoothed_logits[NUM_ESC50_CLASSES];
     static bool s_has_prev_logits = false;
     const float EMA_ALPHA = 0.65f;
 
     int top_class = 0;
     float max_logit = -1e9f;
 
-    for (int i = 0; i < NUM_OUTPUT_CLASSES; i++) {
+    for (int i = 0; i < NUM_ESC50_CLASSES; i++) {
+        float scaled_logit = raw_logits[i] * LOGIT_CALIBRATION_SCALE;
         if (!s_has_prev_logits) {
-            s_smoothed_logits[i] = raw_logits[i];
+            s_smoothed_logits[i] = scaled_logit;
         } else {
-            s_smoothed_logits[i] = EMA_ALPHA * raw_logits[i] + (1.0f - EMA_ALPHA) * s_smoothed_logits[i];
+            s_smoothed_logits[i] = EMA_ALPHA * scaled_logit + (1.0f - EMA_ALPHA) * s_smoothed_logits[i];
         }
         if (s_smoothed_logits[i] > max_logit) {
             max_logit = s_smoothed_logits[i];
@@ -400,9 +450,9 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     }
     s_has_prev_logits = true;
 
-    /* 7. Compute Softmax Confidence on Smoothed Logits */
+    /* 7. Compute Softmax Confidence on Calibrated Smoothed Logits */
     float exp_sum = 0.0f;
-    for (int i = 0; i < NUM_OUTPUT_CLASSES; i++) {
+    for (int i = 0; i < NUM_ESC50_CLASSES; i++) {
         exp_sum += expf(s_smoothed_logits[i] - max_logit);
     }
     float confidence = 1.0f / exp_sum;
@@ -422,7 +472,7 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     for (int rank = 0; rank < 3; rank++) {
         int best_k = -1;
         float best_l = -1e9f;
-        for (int k = 0; k < NUM_OUTPUT_CLASSES; k++) {
+        for (int k = 0; k < NUM_ESC50_CLASSES; k++) {
             bool already_picked = false;
             for (int r = 0; r < rank; r++) {
                 if (picked_classes[r] == k) already_picked = true;

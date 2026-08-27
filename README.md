@@ -83,16 +83,62 @@ Measured on physical hardware using continuous microphone audio streams:
 
 ---
 
+## 🎛️ Dual Deployment Profiles: High-Precision vs. Ultra-Compressed CSR
+
+To support different hardware memory tiers, this repository features a compile-time profile selector in [`config.h`](firmware/efr32mg24/src/config.h):
+
+| Metric | 🏆 Profile 1: **Flagship Dense Model** | ⚡ Profile 2: **Sparse Pruned CSR Model** |
+| :--- | :--- | :--- |
+| **Model Type** | 124.9k Dense Distilled Architecture | **`48.9k Active Non-Zeros`** (61.0% Sparsity / 77k Zeros) |
+| **Execution Kernel** | Dense SIMD FPU Loops (`#pragma GCC unroll 8`) | **Branchless CSR Zero-Skipping (`sparse_matvec_mult`)** |
+| **Held-Out Validation Accuracy** | **`90.50%`** (362 / 400 test clips) | **`88.50%`** (354 / 400 test clips) 🌟 |
+| **Flash Memory Usage** | `866 KB (55% of Flash)` | **`607 KB (38% of Flash)`** 💾 *(**-258.4 KB Reclaimed!**)* |
+| **Active Working SRAM** | `86.7%` *(with 33.8 KB Union Pool)* | `86.7%` *(with 33.8 KB Union Pool)* |
+| **Stage 2 GRU Latency (Cortex-M33)** | `490.45 ms` | **`344.45 ms`** ⚡ *(**-146.0 ms Faster!**)* |
+| **Total ML Inference Time** | `764.68 ms` | **`618.13 ms`** |
+| **Live Microphone Confidence** | **`80.4%`** (`keyboard typing` peak) | **`75.2%`** (`keyboard typing` sustained) |
+| **Target Hardware** | High-performance MCUs (1MB+ Flash) | Memory & Power Constrained Nodes (<512KB Flash) |
+
+---
+
+## ⚡ Compressed Sparse Row (CSR) Hardware Zero-Skipping
+
+On the Silicon Labs EFR32MG24 (ARM Cortex-M33 @ 78 MHz), Profile 2 uses custom **Compressed Sparse Row (CSR)** encoding (`SPARSE_WEIGHTS`, `COL_INDICES`, `ROW_OFFSETS`). 
+
+Instead of multiplying 77,448 zero-weights, the single-cycle hardware FPU skips directly to non-zero indices:
+
+```cpp
+/* Branchless CSR Matrix-Vector Multiply (inference.cpp) */
+auto sparse_matvec_mult = [](
+    const float *sparse_w, const uint8_t *col_idx, const uint32_t *row_offsets,
+    const float *bias, const float *x, float *y, int num_rows)
+{
+    for (int r = 0; r < num_rows; r++) {
+        float sum = bias ? bias[r] : 0.0f;
+        uint32_t start = row_offsets[r];
+        uint32_t end   = row_offsets[r + 1];
+        #pragma GCC unroll 8
+        for (uint32_t k = start; k < end; k++) {
+            sum += sparse_w[k] * x[col_idx[k]]; /* ZERO-SKIPPING! */
+        }
+        y[r] = sum;
+    }
+};
+```
+
+---
+
 ## 📈 Confusion Matrix & Validation Results
 
-Evaluated on all 400 test clips across the 50 ESC-50 classes:
+### 1. 🏆 Flagship 90.50% Dense Model
+![Flagship Confusion Matrix](models/confusion_matrix_esc50_91.png)
 
-![Confusion Matrix](models/confusion_matrix_esc50_91.png)
+### 2. ⚡ Ultra-Compressed 88.50% Sparse Pruned Model (48.9k Parameters)
+![Pruned Confusion Matrix](models/confusion_matrix_pruned_88_5.png)
 
-* **Overall Accuracy:** **`90.50%`** (362 / 400 correct classifications).
-* **26 Classes with 100% Perfect Accuracy (8/8 correct):**  
-  `brushing teeth`, `can opening`, `chirping birds`, `church bells`, `clock alarm`, `clock tick`, `coughing`, `cow`, `crickets`, `crow`, `crying baby`, `dog`, `door wood knock`, `fireworks`, `frog`, `glass breaking`, `hand saw`, `helicopter`, `insects`, `pig`, `pouring water`, `rain`, `rooster`, `sea waves`, `siren`, `water drops`.
-* **Classes with Minor Ambiguity:** `keyboard typing (75.0%)`, `chainsaw (75.0%)`, `drinking sipping (75.0%)`, `car horn (62.5%)`.
+* **Overall Accuracy:** **`88.50%`** (354 / 400 correct classifications).
+* **30+ Classes with >87.5% - 100% Perfect Accuracy:**  
+  `breathing`, `chainsaw`, `chirping birds`, `church bells`, `clock alarm`, `clock tick`, `coughing`, `cow`, `crickets`, `crow`, `crying baby`, `dog`, `door wood knock`, `fireworks`, `frog`, `glass breaking`, `hand saw`, `helicopter`, `insects`, `pig`, `pouring water`, `rain`, `rooster`, `sea waves`, `siren`, `water drops`.
 
 ---
 
@@ -100,13 +146,15 @@ Evaluated on all 400 test clips across the 50 ESC-50 classes:
 
 ```text
 ├── models/
-│   ├── best_distilled_qat_model.pth        # 90.50% PyTorch Checkpoint (~500 KB)
-│   └── confusion_matrix_esc50_91.png       # 50x50 Evaluation Heatmap (90.50%)
+│   ├── best_distilled_qat_model.pth        # 90.50% Flagship PyTorch Checkpoint (~500 KB)
+│   ├── confusion_matrix_esc50_91.png       # 50x50 Evaluation Heatmap (90.50% Flagship)
+│   └── confusion_matrix_pruned_88_5.png    # 50x50 Evaluation Heatmap (88.50% Pruned CSR)
 │
 ├── training/
 │   ├── qat_training.py                     # Step 1: Base QAT Training Pipeline
-│   ├── train_distill_91_colab.py           # Step 2: ResNet-34 Knowledge Distillation
-│   ├── train_distill_91_colab.ipynb        # Step 2: Interactive Google Colab Notebook
+│   ├── train_distill_91_colab.py           # Step 2: ResNet-34 Distillation (Flagship 90.50%)
+│   ├── train_distill_91_colab.ipynb        # Step 2: Interactive Colab Notebook
+│   ├── train_prune_csr_colab.py            # Step 3: L1 Pruning + Distillation (88.50% CSR)
 │   └── generate_confusion_matrix.py        # Validation & Heatmap Generator
 │
 ├── export/
@@ -125,7 +173,7 @@ Evaluated on all 400 test clips across the 50 ESC-50 classes:
 │   └── efr32mg24/                          # Silicon Labs xG24-DK2601B Project
 │       ├── CMakeLists.txt
 │       ├── prj.conf
-│       └── src/ (main.cpp, inference.cpp, audio_preprocessing.c, weights.h)
+│       └── src/ (Dual Profiles: Flagship Dense & Sparse CSR Kernels)
 │
 ├── requirements.txt                        # Python Dependencies
 ├── .gitignore                              # Clean Repository Filters

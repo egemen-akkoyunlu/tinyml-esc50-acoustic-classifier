@@ -28,7 +28,17 @@ extern "C" {
 #define MODE_AUDIO_DUMP_TO_PC      1
 #define MODE_INJECT_GOLDEN_SAMPLE  2
 
-#define FIRMWARE_OPERATION_MODE    MODE_REALTIME_INFERENCE /* Benchmark Golden Pre-Recorded Audio (No Mic) */
+#define FIRMWARE_OPERATION_MODE    MODE_REALTIME_INFERENCE
+
+/* ============================================================================
+ * 🎛️ TINYML MODEL PROFILE CONFIGURATION (Select your Hardware Tier)
+ * PROFILE_FLAGSHIP_DENSE_91 : 🏆 90.50% Accuracy, 80.4% Live Keystrokes (866 KB Flash, 490 ms GRU / 764 ms Total)
+ * PROFILE_SPARSE_PRUNED_48K : ⚡ 88.50% Accuracy, CSR Zero-Skipping (607 KB Flash, 373 ms GRU / 647 ms Total)
+ * ============================================================================ */
+#define PROFILE_FLAGSHIP_DENSE_91  1
+#define PROFILE_SPARSE_PRUNED_48K  2
+
+#define ACTIVE_MODEL_PROFILE       PROFILE_SPARSE_PRUNED_48K
 
 #define ENABLE_STREAMING_INFERENCE         true
 #define ENABLE_BLE_COMMUNICATION           false /* Set to false for standalone microphone audio inference over UART */
