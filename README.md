@@ -22,34 +22,27 @@ This repository contains the complete research, training pipeline, and embedded 
 
 ---
 
-## 📊 Dual-Platform Hardware Benchmarks
+## 📊 Multi-Target Hardware & Profile Benchmarks
 
-Measured on physical hardware using continuous microphone audio streams:
+Measured directly on physical edge hardware across live audio streams and held-out validation sets:
 
-| Metric | Espressif ESP32-S3 Sense | Silicon Labs EFR32MG24 (xG24-DK2601B) |
-| :--- | :--- | :--- |
-| **Processor Architecture** | Xtensa LX7 Dual-Core @ 160 MHz | ARM Cortex-M33 @ 78 MHz |
-| **Hardware Acceleration** | Xtensa PIE (128-bit SIMD Vector Engine) | CMSIS-NN / MVP + Single-Cycle FPU |
-| **Quantization Scheme** | Full-Integer INT8 Layers + FP32 Softmax | 2-Stage Hybrid (INT8 CNN + FPU GRU) |
-| **Pre-Quant PyTorch QAT Accuracy** | **`90.50%`** (362 / 400 test clips) | **`90.50%`** (362 / 400 test clips) |
-| **Post-Quantization On-Chip Accuracy** | **`89.00%`** (356 / 400 test clips) | **`90.25%`** (361 / 400 test clips) |
-| **Quantization Accuracy Drop** | **`-1.50%`** *(Full INT8 Layers)* | **`-0.25%`** *(Hybrid INT8 + FPU)* |
-| **Total ML Inference Time** | **`450.50 ms`** | **`731.90 ms`** |
-| **DSP Feature Extraction** | **`4.38 ms`** (ESP-DL Fbank) | **`54.11 ms`** (CMSIS-DSP) |
-| **Sustained Active Current** | **`43.5 mA`** (@ 3.3V, Otii Arc Pro) | **`-`** *(Not measured)* |
-| **Sustained Active Power** | **`161 mW`** (Otii Arc Pro) | **`-`** *(Not measured)* |
-| **Model Flash Footprint** | **`146.8 KB`** (`model.espdl` in Flash RODATA) | **`14.6 KB CNN + 480 KB Weights`** |
-| **Active Working SRAM** | **`~48 KB`** *(Tensor Arena in Internal SRAM)* | **`172 KB Arena + 35.1 KB FPU BSS`** <sup>†</sup> |
-| **Live Mic Peak Confidence** | **`92.0%`** (`keyboard typing` sustained) | **`81.0%`** *(Peak in continuous baseline)* <sup>*</sup> |
+| Metric | ⚡ Espressif ESP32-S3 Sense | 🏆 Silicon Labs EFR32MG24 (Flagship Dense 91) | 🚀 Silicon Labs EFR32MG24 (Sparse Pruned CSR) |
+| :--- | :--- | :--- | :--- |
+| **Processor Architecture** | Xtensa LX7 Dual-Core @ 160 MHz | ARM Cortex-M33 @ 78 MHz | ARM Cortex-M33 @ 78 MHz |
+| **Hardware Acceleration** | Xtensa PIE (128-bit SIMD Vector Engine) | CMSIS-NN / MVP + Single-Cycle FPU | CMSIS-NN / MVP + Branchless CSR Zero-Skipping FPU |
+| **Active Model Parameters** | 124,866 (100% Dense INT8) | 124,866 (100% Dense Hybrid) | **`48,874 Active Non-Zeros`** (61.0% Sparsity) |
+| **Model Quantization Scheme** | Full-Integer INT8 Layers + FP32 Softmax | 2-Stage Hybrid (INT8 CNN + Dense FPU GRU) | 2-Stage Hybrid (INT8 CNN + Sparse CSR FPU GRU) |
+| **Pre-Quant PyTorch QAT Accuracy** | **`90.50%`** (362 / 400 test clips) | **`90.50%`** (362 / 400 test clips) | **`88.50%`** (354 / 400 test clips) 🌟 |
+| **Post-Quantization On-Chip Accuracy** | **`89.00%`** (356 / 400 test clips) | **`90.25%`** (361 / 400 test clips) | **`88.50%`** (354 / 400 test clips) |
+| **Stage 2 GRU Latency (Cortex-M33)** | *(Monolithic Single-Stage)* | `490.23 ms` | **`373.08 ms`** ⚡ *(**-117.15 ms Faster!**)* |
+| **Total ML Inference Time** | **`450.50 ms`** | **`764.49 ms`** | **`647.28 ms`** ⚡ *(**-117.21 ms Speedup!**)* |
+| **DSP Feature Extraction** | **`4.38 ms`** (ESP-DL Fbank) | **`59.45 ms`** (CMSIS-DSP + Pre-Emphasis) | **`59.45 ms`** (CMSIS-DSP + Pre-Emphasis) |
+| **Sustained Active Current / Power** | **`43.5 mA / 161 mW`** (Otii Arc Pro @ 3.3V) | *(Low-power wireless profile)* | *(Low-power wireless profile)* |
+| **Firmware Flash Memory Usage** | **`146.8 KB`** (`model.espdl` in Flash) | `866 KB (55.0% of Flash)` | **`607 KB (38.6% of Flash)`** 💾 *(**-258.4 KB Reclaimed!**)* |
+| **Active Working SRAM** | **`~48 KB`** *(Internal SRAM)* | **`172 KB Arena + 33.8 KB Union Pool`** <sup>†</sup> | **`172 KB Arena + 33.8 KB Union Pool`** <sup>†</sup> |
+| **Live Mic Peak Confidence** | **`92.0%`** (`keyboard typing` sustained) | **`80.4%`** (`keyboard typing` peak) | **`69.9% (~70%)`** (`keyboard typing` calibrated) |
 
-> <sup>†</sup> **EFR32MG24 Stage 2 FPU Memory Breakdown (35.14 KB):**
-> * Input features buffer `s_features[39][32]`: $39 \times 32 \times 4\text{ B} = 4,992\text{ bytes}$
-> * Recurrent hidden sequence `s_H[39][160]`: $39 \times 160 \times 4\text{ B} = 24,960\text{ bytes}$
-> * Gate vectors `s_gate_x[480]` + `s_gate_h[480]`: $960 \times 4\text{ B} = 3,840\text{ bytes}$
-> * Pooling, bottleneck, and logits vectors: $(160 + 128 + 50) \times 4\text{ B} = 1,352\text{ bytes}$
-> * **Total Static BSS Allocation:** $4992 + 24960 + 3840 + 1352 = \mathbf{35,144\text{ bytes}} = \mathbf{34.32\text{ KB}}$
-
-> <sup>*</sup> *Note on EFR32MG24:* 81.0% peak confidence was achieved during early continuous typing baseline evaluations. Onboard digital I2S microphone dynamic range and AGC tuning are subject to ongoing experimentation. Power profiling on EFR32MG24 is planned.
+> <sup>†</sup> **Zero-BSS Memory Overlay:** By sharing the 172 KB TFLM Tensor Arena with Stage 2 working buffers via an `InferenceMemoryPool` union overlay, SRAM consumption is reduced by **33.8 KB**, holding total RAM usage at 86.7% with zero dynamic heap allocation.
 
 ---
 
