@@ -136,7 +136,8 @@ auto sparse_matvec_mult = [](
 │   └── generate_confusion_matrix.py        # Validation & Heatmap Generator
 │
 ├── export/
-│   ├── quantize_esc50_to_espdl.py          # ESP-PPQ Quantizer for ESP32-S3
+│   ├── quantize_esc50_to_espdl.py          # ESP-PPQ INT8 Quantizer & Auditor for ESP32-S3
+│   ├── verify_efr32_hybrid_pipeline.py     # Bit-Exact 2-Stage On-Chip Pipeline Auditor for EFR32
 │   ├── export_clean_cnn_int8.py            # TFLM INT8 Header Generator for EFR32
 │   ├── export_golden_keyboard_pcm.py       # Bit-Exact Validation Audio Exporter
 │   └── simulate_onchip_inference.py        # Bit-Exact CPU Simulator

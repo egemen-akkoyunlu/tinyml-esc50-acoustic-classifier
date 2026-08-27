@@ -412,7 +412,7 @@ def main():
     clean_acc = (clean_correct / qat_total) * 100.0
     print(f"  • Clean Model Parity Check: {clean_acc:.2f}% (Matches QAT!)")
 
-    onnx_fp32_path = os.path.join(root_dir, "phinet_crnn_fp32.onnx")
+    onnx_fp32_path = os.path.join(project_root, "phinet_crnn_fp32.onnx")
     dummy_input = torch.randn(1, 1, 52, 313, dtype=torch.float32, device=device)
 
     torch.onnx.export(
@@ -483,17 +483,47 @@ def main():
     
     int8_correct = 0
     int8_total = 0
+    all_preds = []
+    all_targets = []
     for specs, labels in val_loader:
         specs = specs.to(device)
         labels = labels.to(device)
         pred = executor.forward(inputs=specs)[0]
         if isinstance(pred, np.ndarray):
             pred = torch.from_numpy(pred).to(device)
-        int8_correct += (pred.argmax(1) == labels).sum().item()
+        pred_cls = pred.argmax(1)
+        int8_correct += (pred_cls == labels).sum().item()
         int8_total += labels.size(0)
+        all_preds.extend(pred_cls.cpu().numpy())
+        all_targets.extend(labels.cpu().numpy())
 
     int8_acc = (int8_correct / int8_total) * 100.0
     print(f"  • INT8 ESP-DL Validation Accuracy (After Quant): {int8_acc:.2f}% ({int8_correct}/{int8_total}) 🚀")
+
+    # Generate Confusion Matrix
+    try:
+        from sklearn.metrics import confusion_matrix
+        import matplotlib.pyplot as plt
+
+        cm = confusion_matrix(np.array(all_targets), np.array(all_preds), labels=list(range(50)))
+        plt.figure(figsize=(16, 14))
+        plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+        plt.title(f'ESC-50 ESP32-S3 Post-Quantization INT8 Confusion Matrix ({int8_acc:.2f}% Accuracy)', fontsize=14, fontweight='bold', pad=15)
+        plt.colorbar(fraction=0.046, pad=0.04)
+        classes = val_loader.dataset.dataset.classes
+        tick_marks = np.arange(len(classes))
+        plt.xticks(tick_marks, classes, rotation=90, fontsize=8)
+        plt.yticks(tick_marks, classes, fontsize=8)
+        plt.xlabel('Predicted Label', fontsize=12, labelpad=10)
+        plt.ylabel('True Label', fontsize=12, labelpad=10)
+        plt.tight_layout()
+
+        cm_out_path = os.path.join(project_root, "models", "confusion_matrix_esp32_int8_89.png")
+        os.makedirs(os.path.dirname(cm_out_path), exist_ok=True)
+        plt.savefig(cm_out_path, dpi=300, bbox_inches='tight')
+        print(f"  • Saved Post-Quantization Confusion Matrix to: {cm_out_path} 🖼️")
+    except Exception as e:
+        print(f"  • Could not generate confusion matrix plot: {e}")
 
     # =========================================================================
     # 7. FINAL QUANTIZATION SUMMARY REPORT
