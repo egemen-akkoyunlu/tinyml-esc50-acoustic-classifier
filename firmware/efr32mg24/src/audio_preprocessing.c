@@ -26,7 +26,7 @@ void audio_preprocessing_init(void) {
 #endif
 
     is_preproc_initialized = true;
-    printf("-> [OK] Preprocessing DSP modulu baslatildi (Bit-Exact Torchaudio Mel Filterbank - 0 Extra RAM).\n");
+    printf("-> [OK] Audio preprocessing DSP module initialized (Bit-Exact Torchaudio Mel Filterbank - 0 Extra RAM).\n");
 }
 
 int32_t audio_preprocess_compute_dc(const int16_t *raw_pcm, int num_samples) {

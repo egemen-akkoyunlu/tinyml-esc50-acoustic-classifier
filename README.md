@@ -215,5 +215,14 @@ screen /dev/ttyACM* 115200
 
 ---
 
+## 👤 Author & Affiliations
+
+**Egemen Acar Akkoyunlu**  
+* 🏛️ **Electrical and Electronics Engineering**, Boğaziçi University, Istanbul, Turkey  
+* 🔬 **Research Intern**, Fondazione Bruno Kessler (FBK), Trento, Italy  
+* 🐙 **GitHub:** [@egemen-akkoyunlu](https://github.com/egemen-akkoyunlu)
+
+---
+
 ## 📜 License
 This project is licensed under the Apache 2.0 License.
