@@ -141,6 +141,7 @@ auto sparse_matvec_mult = [](
 ├── models/
 │   ├── best_distilled_qat_model.pth        # 90.50% Flagship PyTorch Checkpoint (~500 KB)
 │   ├── confusion_matrix_esc50_91.png       # 50x50 Evaluation Heatmap (90.50% Flagship)
+│   ├── confusion_matrix_esp32_int8_89.png  # 50x50 Evaluation Heatmap (89.00% On-Chip INT8 ESP-DL)
 │   └── confusion_matrix_pruned_88_5.png    # 50x50 Evaluation Heatmap (88.50% Pruned CSR)
 │
 ├── training/
