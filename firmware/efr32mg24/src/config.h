@@ -13,7 +13,7 @@ extern "C" {
 #define SAMPLE_RATE             16000
 #define RECORD_SECONDS          5
 #define TOTAL_SAMPLES           (SAMPLE_RATE * RECORD_SECONDS) /* 80000 samples */
-#define AUDIO_RING_BUFFER_SAMPLES (SAMPLE_RATE * 1)            /* 16000 samples = 32 KB RAM */
+#define AUDIO_RING_BUFFER_SAMPLES (SAMPLE_RATE * 1)            /* 16000 samples (1.0s) = 32 KB RAM (Full Acoustic Fidelity) */
 #define DUMP_RECORD_SECONDS     3                              /* 3 seconds quick dump = 48000 samples */
 #define DUMP_TOTAL_SAMPLES      (SAMPLE_RATE * DUMP_RECORD_SECONDS)
 #define AUDIO_SOFTWARE_GAIN_MULTIPLIER 48                      /* 48x Software Digital Gain (Full Acoustic Dynamic Range) */

@@ -15,10 +15,29 @@ ESC-50-master/
 *.wav
 *.mp3
 
-# Build Directories (Zephyr RTOS & CMake)
+# Machine Learning Checkpoints, Calibration Data & Large Binaries
+*.pth
+*.pt
+*.onnx
+*.tflite
+*.npy
+*.npz
+*.bin
+*.zip
+*.tar.gz
+calib_data/
+val_data/
+tf_saved_model*/
+tf_cnn_int8*/
+tflite_models*/
+onnx_models*/
+
+# Build Directories (Zephyr RTOS, CMake, ESP-IDF)
 build/
 twister-out/
 .cache/
+.ninja_deps
+.ninja_log
 
 # OS specific files
 .DS_Store

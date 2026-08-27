@@ -73,6 +73,19 @@ void audio_preprocess_append_chunk_direct(
 );
 
 /**
+ * @brief Computes Mel frames for an active audio chunk and tiles it across the full 5.0s (313 frames) TFLM input tensor.
+ * Eliminates temporal dilution during real-time streaming (0 extra RAM).
+ */
+void audio_preprocess_tile_chunk_direct(
+    const int16_t *new_pcm_chunk, 
+    int num_samples, 
+    float scale, 
+    int32_t zero_point, 
+    bool is_int8, 
+    void *out_tensor_ptr
+);
+
+/**
  * @brief Quantizes floating-point Log-Mel Spectrogram features into model INT8 tensor format.
  */
 void audio_preprocess_quantize_int8(const float *in_spectrogram, int8_t *out_int8_tensor, float scale, int32_t zero_point);

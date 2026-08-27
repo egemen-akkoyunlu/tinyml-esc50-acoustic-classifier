@@ -146,7 +146,7 @@ int main(void) {
         memset(input_tensor_ptr, 0, sizeof(float) * SPECTROGRAM_TOTAL_ELEMENTS);
     }
 
-    const int SILENCE_AC_RMS_THRESHOLD = 800;       /* Squelch threshold for 48x amplified audio */
+    const int SILENCE_AC_RMS_THRESHOLD = 3500;      /* Squelch threshold: Ignores ambient noise (<3500), triggers on active sounds */
     const float SOUND_CONFIDENCE_THRESHOLD = 0.35f; /* 35% minimum confidence */
     int inference_counter = 0;
 
@@ -169,18 +169,9 @@ int main(void) {
         }
         int ac_rms = (int)sqrtf((float)(sum_ac_sq / AUDIO_RING_BUFFER_SAMPLES));
 
-        /* 3. Shift spectrogram columns left in TFLM tensor and append new Mel frames */
+        /* 3. Compute and tile active Mel chunk across full 5.0s (313 frames) to eliminate temporal dilution */
         uint32_t t_dsp_start = k_cycle_get_32();
-        static bool s_buffer_primed = false;
-        if (!s_buffer_primed) {
-            /* Fully prime all 313 frames (5 seconds) with live audio on startup */
-            for (int r = 0; r < 5; r++) {
-                audio_preprocess_append_chunk_direct(raw_pcm, AUDIO_RING_BUFFER_SAMPLES, scale, zero_point, is_input_int8, input_tensor_ptr);
-            }
-            s_buffer_primed = true;
-        } else {
-            audio_preprocess_append_chunk_direct(raw_pcm, AUDIO_RING_BUFFER_SAMPLES, scale, zero_point, is_input_int8, input_tensor_ptr);
-        }
+        audio_preprocess_tile_chunk_direct(raw_pcm, AUDIO_RING_BUFFER_SAMPLES, scale, zero_point, is_input_int8, input_tensor_ptr);
         uint32_t t_dsp_end = k_cycle_get_32();
         uint32_t dsp_time_us = k_cyc_to_us_near32(t_dsp_end - t_dsp_start);
 
