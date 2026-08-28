@@ -26,21 +26,23 @@ This repository contains the complete research, training pipeline, and embedded 
 
 Measured directly on physical edge hardware across live audio streams and held-out validation sets:
 
-| Metric | ⚡ Espressif ESP32-S3 Sense | 🏆 Silicon Labs EFR32MG24 (Flagship Dense 91) | 🚀 Silicon Labs EFR32MG24 (Sparse Pruned CSR) |
-| :--- | :--- | :--- | :--- |
-| **Processor Architecture** | Xtensa LX7 Dual-Core @ 160 MHz | ARM Cortex-M33 @ 78 MHz | ARM Cortex-M33 @ 78 MHz |
-| **Hardware Acceleration** | Xtensa PIE (128-bit SIMD Vector Engine) | CMSIS-NN / MVP + Single-Cycle FPU | CMSIS-NN / MVP + Branchless CSR Zero-Skipping FPU |
-| **Active Model Parameters** | 124,866 (100% Dense INT8) | 124,866 (100% Dense Hybrid) | **`52,930 Active Non-Zeros`** (57.6% Sparsity) |
-| **Model Quantization Scheme** | Full-Integer INT8 Layers + FP32 Softmax | 2-Stage Hybrid (INT8 CNN + Dense FPU GRU) | 2-Stage Hybrid (INT8 CNN + Sparse CSR FPU GRU) |
-| **Pre-Quant PyTorch QAT Accuracy** | **`90.50%`** (362 / 400 test clips) | **`90.50%`** (362 / 400 test clips) | **`88.50%`** (354 / 400 test clips) 🌟 |
-| **Post-Quantization On-Chip Accuracy** | **`89.00%`** (356 / 400 test clips) | **`90.25%`** (361 / 400 test clips) | **`88.50%`** (354 / 400 test clips) |
-| **Stage 2 GRU Latency (Cortex-M33)** | *(Monolithic Single-Stage)* | `490.23 ms` | **`373.08 ms`** ⚡ *(**-117.15 ms Faster!**)* |
-| **Total ML Inference Time** | **`450.50 ms`** | **`764.49 ms`** | **`647.28 ms`** ⚡ *(**-117.21 ms Speedup!**)* |
-| **DSP Feature Extraction** | **`4.38 ms`** (ESP-DL Fbank) | **`59.45 ms`** (CMSIS-DSP + Pre-Emphasis) | **`59.45 ms`** (CMSIS-DSP + Pre-Emphasis) |
-| **Sustained Active Current / Power** | **`43.5 mA / 161 mW`** (Otii Arc Pro @ 3.3V) | *(Low-power wireless profile)* | *(Low-power wireless profile)* |
-| **Firmware Flash Memory Usage** | **`146.8 KB`** (`model.espdl` in Flash) | `866 KB (55.0% of Flash)` | **`620 KB (39.4% of Flash)`** 💾 *(**-231 KB Reclaimed!**)* |
-| **Active Working SRAM** | **`~48 KB`** *(Internal SRAM)* | **`172 KB Arena + 33.8 KB Union Pool`** <sup>†</sup> | **`172 KB Arena + 33.8 KB Union Pool`** <sup>†</sup> |
-| **Live Mic Peak Confidence** | **`92.0%`** (`keyboard typing` sustained) | **`80.4%`** (`keyboard typing` peak) | **`69.9% (~70%)`** (`keyboard typing` calibrated) |
+| Metric | ⚡ Espressif ESP32-S3 Sense | 👑 EFR32MG24 (Native CMSIS-NN Ping-Pong) | 🚀 EFR32MG24 (INT8 Fixed SIMD) | ✂️ EFR32MG24 (Sparse Pruned CSR) | 🏛️ EFR32MG24 (Dense FPU GRU) |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Profile Macro** | `(ESP-DL Monolithic)` | `PROFILE_CMSIS_NN_PINGPONG_91` | `PROFILE_INT8_FIXED_SIMD_91` | `PROFILE_SPARSE_PRUNED_48K` | `PROFILE_FLAGSHIP_DENSE_91` |
+| **Processor Arch** | Xtensa LX7 Dual-Core @ 160 MHz | ARM Cortex-M33 @ 78 MHz | ARM Cortex-M33 @ 78 MHz | ARM Cortex-M33 @ 78 MHz | ARM Cortex-M33 @ 78 MHz |
+| **Hardware Engine** | Xtensa PIE 128-bit SIMD | Native CMSIS-NN + Cortex SIMD | TFLM CNN + `__SMLAD` SIMD | TFLM CNN + Zero-Skipping FPU | TFLM CNN + Single-Cycle FPU |
+| **Active Parameters** | 124,866 (100% Dense INT8) | 124,866 (100% Dense INT8) | 124,866 (100% Dense INT8) | **`52,930 Active Non-Zeros`** | 124,866 (100% Dense Hybrid) |
+| **Quantization Scheme** | Full INT8 + FP32 Softmax | **100% Full-Integer INT8** | **100% Full-Integer INT8** | INT8 CNN + Sparse FP32 GRU | INT8 CNN + Dense FP32 GRU |
+| **Validation Accuracy** | **`89.00%`** (356/400) | **`91.50%`** (366/400) 🌟 | **`91.50%`** (366/400) 🌟 | **`88.50%`** (354/400) | **`90.25% - 90.50%`** (362/400) |
+| **Top-3 Accuracy** | **`97.00%`** | **`97.25%`** (389/400) | **`97.25%`** (389/400) | **`95.75%`** (383/400) | **`96.50%`** (386/400) |
+| **Stage 1 CNN Latency** | *(Monolithic)* | **`289.06 ms`** | `289.06 ms` | `289.06 ms` | `274.26 ms` |
+| **Stage 2 GRU Latency** | *(Monolithic)* | **`196.35 ms`** ⚡ | `229.89 ms` | `373.08 ms` | `490.23 ms` |
+| **Total ML Latency** | **`450.50 ms`** | **`485.41 ms`** ⚡ | **`518.95 ms`** | **`647.28 ms`** | **`764.49 ms`** |
+| **DSP Latency** | `4.38 ms` (ESP-DL Fbank) | `59.39 ms` (CMSIS-DSP) | `59.45 ms` (CMSIS-DSP) | `59.45 ms` (CMSIS-DSP) | `59.45 ms` (CMSIS-DSP) |
+| **Active Working SRAM** | **`~48 KB`** | **`96.3 KB`** 💾 *(**-74 KB Slashed!**)* | `172 KB Arena + 33.8 KB Pool` | `172 KB Arena + 33.8 KB Pool` | `172 KB Arena + 33.8 KB Pool` |
+| **Total Microcontroller RAM**| `~18.7%` | **`58.2% (152 KB / 256 KB)`** 🏆 | `86.8% (227 KB / 256 KB)` | `86.7% (226 KB / 256 KB)` | `86.7% (226 KB / 256 KB)` |
+| **Firmware Flash Usage** | **`146.8 KB`** | **`390.4 KB (24.8%)`** 💾 *(**-196 KB!**)*| `586.4 KB (37.2%)` | `620.0 KB (39.4%)` | `866.0 KB (55.0%)` |
+| **Live Mic Confidence** | **`92.0%`** (`keyboard typing`) | **`80.3%`** (`keyboard typing`) | **`80.3%`** (`keyboard typing`) | **`69.9%`** (`keyboard typing`) | **`80.4%`** (`keyboard typing`) |
 
 > <sup>†</sup> **Zero-BSS Memory Overlay:** By sharing the 172 KB TFLM Tensor Arena with Stage 2 working buffers via an `InferenceMemoryPool` union overlay, SRAM consumption is reduced by **33.8 KB**, holding total RAM usage at 86.7% with zero dynamic heap allocation.
 

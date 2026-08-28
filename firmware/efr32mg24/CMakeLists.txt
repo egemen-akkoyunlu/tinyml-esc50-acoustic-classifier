@@ -8,6 +8,7 @@ target_sources(app PRIVATE
     src/audio.c 
     src/audio_preprocessing.c
     src/inference.cpp
+    src/cmsis_nn_cnn_engine.cpp
     src/ble_server.c
 )
 

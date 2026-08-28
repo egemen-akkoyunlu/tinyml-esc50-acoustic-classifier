@@ -32,13 +32,17 @@ extern "C" {
 
 /* ============================================================================
  * 🎛️ TINYML MODEL PROFILE CONFIGURATION (Select your Hardware Tier)
- * PROFILE_FLAGSHIP_DENSE_91 : 🏆 90.50% Accuracy, 80.4% Live Keystrokes (866 KB Flash, 490 ms GRU / 764 ms Total)
- * PROFILE_SPARSE_PRUNED_48K : ⚡ 88.50% Accuracy, CSR Zero-Skipping (620 KB Flash, 373 ms GRU / 647 ms Total)
+ * PROFILE_FLAGSHIP_DENSE_91   : 🏆 90.50% Accuracy, 80.4% Live Keystrokes (866 KB Flash, 490 ms GRU / 764 ms Total)
+ * PROFILE_SPARSE_PRUNED_48K   : ⚡ 88.50% Accuracy, CSR Zero-Skipping (620 KB Flash, 373 ms GRU / 647 ms Total)
+ * PROFILE_INT8_FIXED_SIMD_91  : 🚀 91.50% Accuracy, Full 5.0s INT8 SIMD (586 KB Flash, 172 KB Arena, 229 ms GRU)
+ * PROFILE_CMSIS_NN_PINGPONG_91: 👑 91.50% Accuracy, Native CMSIS-NN Ping-Pong (540 KB Flash, 98 KB Arena, 55% SRAM!) [RECOMMENDED]
  * ============================================================================ */
-#define PROFILE_FLAGSHIP_DENSE_91  1
-#define PROFILE_SPARSE_PRUNED_48K  2
+#define PROFILE_FLAGSHIP_DENSE_91    1
+#define PROFILE_SPARSE_PRUNED_48K    2
+#define PROFILE_INT8_FIXED_SIMD_91   3
+#define PROFILE_CMSIS_NN_PINGPONG_91 4
 
-#define ACTIVE_MODEL_PROFILE       PROFILE_SPARSE_PRUNED_48K
+#define ACTIVE_MODEL_PROFILE         PROFILE_CMSIS_NN_PINGPONG_91
 
 #define ENABLE_STREAMING_INFERENCE         true
 #define ENABLE_BLE_COMMUNICATION           false /* Set to false for standalone microphone audio inference over UART */
@@ -61,9 +65,13 @@ extern "C" {
 
 /* ============================================================================
  * TENSORFLOW LITE MICRO CONFIGURATION
- * Model requires ~68 KB SRAM arena with CMSIS-NN scratch. Set to 70 KB.
  * ============================================================================ */
-#define TFLM_TENSOR_ARENA_SIZE  (172 * 1024) /* 175 KB RAM Arena for 91% Symmetric Model */
+#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+    #define TFLM_TENSOR_ARENA_SIZE  (4 * 1024) /* TFLM Arena eliminated! Native CMSIS-NN uses 98 KB ping-pong */
+#else
+    #define TFLM_TENSOR_ARENA_SIZE  (172 * 1024) /* 172 KB RAM Arena for TFLM */
+#endif
+#define TFLM_NUM_OPS            8
 #define NUM_ESC50_CLASSES       50
 
 /* ============================================================================

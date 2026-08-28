@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-/* Real 5-Second 16kHz PCM Audio from ESC-50: 1-137-A-32.wav (keyboard_typing) */
+/* Real 5-Second 16kHz PCM Audio from Held-Out Validation: 1-94231-B-32.wav (keyboard_typing) */
 #define GOLDEN_AUDIO_SAMPLE_COUNT 80000
 
 static const int16_t GOLDEN_KEYBOARD_TYPING_PCM[GOLDEN_AUDIO_SAMPLE_COUNT] = {

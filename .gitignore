@@ -38,6 +38,9 @@ twister-out/
 .cache/
 .ninja_deps
 .ninja_log
+*.o
+*.bak
+test_cmsis_host
 
 # OS specific files
 .DS_Store

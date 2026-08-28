@@ -137,7 +137,7 @@ int main(void) {
     /* ========================================================================
      * 🧠 MODE 0: CONTINUOUS SLIDING-WINDOW STREAMING INFERENCE
      * ======================================================================== */
-    printk("\n-> [CONTINUOUS STREAMING MODE] Starting Real-Time Acoustic Inference Loop (0.5s Stride)...\n");
+    printk("\n-> [CONTINUOUS STREAMING MODE] Starting Real-Time Acoustic Inference Loop...\n");
     
     /* Zero-initialize the TFLM input tensor buffer to true silence (-128) */
     if (is_input_int8) {
@@ -151,7 +151,7 @@ int main(void) {
     int inference_counter = 0;
 
     while (1) {
-        /* 1. Record 0.5-second audio chunk (8,000 samples = 16 KB RAM) directly into audio_ring_buffer */
+        /* 1. Record 1.0-second audio chunk directly into audio_ring_buffer */
         audio_record_to_ram();
         int16_t *raw_pcm = get_audio_buffer();
 

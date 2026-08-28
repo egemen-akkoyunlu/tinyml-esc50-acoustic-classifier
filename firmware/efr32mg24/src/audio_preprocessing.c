@@ -52,7 +52,11 @@ static void compute_frame_power_spectrum_onthefly(
             if (audio_idx < 0) audio_idx = 0;
         }
 
-        float sample_val = (float)(raw_pcm[audio_idx] - dc_offset) / 32768.0f;
+        int prev_idx = (audio_idx > 0) ? audio_idx - 1 : audio_idx;
+        float raw_curr = (float)(raw_pcm[audio_idx] - dc_offset) / 32768.0f;
+        float raw_prev = (float)(raw_pcm[prev_idx] - dc_offset) / 32768.0f;
+        /* 1st-Order Pre-Emphasis Filter: y[n] = x[n] - 0.95 * x[n-1] */
+        float sample_val = raw_curr - 0.95f * raw_prev;
         fft_buf[n] = sample_val * HANN_WINDOW_512[n];
     }
 
