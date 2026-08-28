@@ -171,7 +171,7 @@ auto sparse_matvec_mult = [](
 ## 🚀 Step-by-Step Reproduction Guide
 
 ### 1. Environment & Dataset Setup
-* **Recommended Python Version:** `Python 3.10` - `Python 3.12`
+* **Python Version:** `Python 3.12.3` (Tested & Verified)
 * **Zephyr RTOS Toolchain:** Follow the official [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html) to set up `west`, the Zephyr SDK, and CMake.
 
 ```bash
