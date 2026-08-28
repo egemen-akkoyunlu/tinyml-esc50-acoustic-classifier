@@ -33,15 +33,14 @@ Measured directly on physical edge hardware across live audio streams and held-o
 | **Hardware Engine** | Xtensa PIE 128-bit SIMD | Native CMSIS-NN + Cortex SIMD | TFLM CNN + `__SMLAD` SIMD | TFLM CNN + Zero-Skipping FPU | TFLM CNN + Single-Cycle FPU |
 | **Active Parameters** | 124,866 (100% Dense INT8) | 124,866 (100% Dense INT8) | 124,866 (100% Dense INT8) | **`52,930 Active Non-Zeros`** | 124,866 (100% Dense Hybrid) |
 | **Quantization Scheme** | Full INT8 + FP32 Softmax | **100% Full-Integer INT8** | **100% Full-Integer INT8** | INT8 CNN + Sparse FP32 GRU | INT8 CNN + Dense FP32 GRU |
-| **Validation Accuracy** | **`89.00%`** (356/400) | **`91.50%`** (366/400) 🌟 | **`91.50%`** (366/400) 🌟 | **`88.50%`** (354/400) | **`90.25% - 90.50%`** (362/400) |
-| **Top-3 Accuracy** | **`97.00%`** | **`97.25%`** (389/400) | **`97.25%`** (389/400) | **`95.75%`** (383/400) | **`96.50%`** (386/400) |
+| **Validation Accuracy (Top-1)** | **`89.00%`** (356/400) | **`91.50%`** (366/400) 🌟 | **`91.50%`** (366/400) 🌟 | **`88.50%`** (354/400) | **`90.25% - 90.50%`** (362/400) |
 | **Stage 1 CNN Latency** | *(Monolithic)* | **`289.06 ms`** | `289.06 ms` | `289.06 ms` | `274.26 ms` |
-| **Stage 2 GRU Latency** | *(Monolithic)* | **`196.35 ms`** ⚡ | `229.89 ms` | `373.08 ms` | `490.23 ms` |
-| **Total ML Latency** | **`450.50 ms`** | **`485.41 ms`** ⚡ | **`518.95 ms`** | **`647.28 ms`** | **`764.49 ms`** |
+| **Stage 2 GRU Latency** | *(Monolithic)* | **`196.35 ms`** | `229.89 ms` | `373.08 ms` | `490.23 ms` |
+| **Total ML Latency** | **`450.50 ms`** | **`485.41 ms`** | **`518.95 ms`** | **`647.28 ms`** | **`764.49 ms`** |
 | **DSP Latency** | `4.38 ms` (ESP-DL Fbank) | `59.39 ms` (CMSIS-DSP) | `59.45 ms` (CMSIS-DSP) | `59.45 ms` (CMSIS-DSP) | `59.45 ms` (CMSIS-DSP) |
-| **Active Working SRAM** | **`~48 KB`** | **`96.3 KB`** 💾 *(**-74 KB Slashed!**)* | `172 KB Arena + 33.8 KB Pool` | `172 KB Arena + 33.8 KB Pool` | `172 KB Arena + 33.8 KB Pool` |
-| **Total Microcontroller RAM**| `~18.7%` | **`58.2% (152 KB / 256 KB)`** 🏆 | `86.8% (227 KB / 256 KB)` | `86.7% (226 KB / 256 KB)` | `86.7% (226 KB / 256 KB)` |
-| **Firmware Flash Usage** | **`146.8 KB`** | **`390.4 KB (24.8%)`** 💾 *(**-196 KB!**)*| `586.4 KB (37.2%)` | `620.0 KB (39.4%)` | `866.0 KB (55.0%)` |
+| **Active Working SRAM** | **`~48 KB`** | **`96.3 KB`** | `172 KB Arena + 33.8 KB Pool` | `172 KB Arena + 33.8 KB Pool` | `172 KB Arena + 33.8 KB Pool` |
+| **Total Microcontroller RAM**| `~18.7%` | **`58.2% (152 KB / 256 KB)`** | `86.8% (227 KB / 256 KB)` | `86.7% (226 KB / 256 KB)` | `86.7% (226 KB / 256 KB)` |
+| **Firmware Flash Usage** | **`146.8 KB`** | **`390.4 KB (24.8%)`** | `586.4 KB (37.2%)` | `620.0 KB (39.4%)` | `866.0 KB (55.0%)` |
 | **Live Mic Confidence** | **`92.0%`** (`keyboard typing`) | **`80.3%`** (`keyboard typing`) | **`80.3%`** (`keyboard typing`) | **`69.9%`** (`keyboard typing`) | **`80.4%`** (`keyboard typing`) |
 
 > <sup>†</sup> **Zero-BSS Memory Overlay:** By sharing the 172 KB TFLM Tensor Arena with Stage 2 working buffers via an `InferenceMemoryPool` union overlay, SRAM consumption is reduced by **33.8 KB**, holding total RAM usage at 86.7% with zero dynamic heap allocation.
@@ -109,15 +108,15 @@ auto sparse_matvec_mult = [](
 
 ## 📈 Confusion Matrix & Validation Results
 
-### 1. 🏆 Flagship 90.50% Dense Model
-![Flagship Confusion Matrix](models/confusion_matrix_esc50_91.png)
+### 1. 👑 Crown Flagship 91.50% Full-Integer INT8 Model (Silicon Labs EFR32MG24)
+![Full INT8 Confusion Matrix](models/confusion_matrix_efr32_int8_fixed_91.png)
 
 ### 2. ⚡ Ultra-Compressed 88.50% Sparse Pruned Model (52.9k Parameters)
 ![Pruned Confusion Matrix](models/confusion_matrix_pruned_88_5.png)
 
-* **Overall Accuracy:** **`88.50%`** (354 / 400 correct classifications).
+* **Overall Accuracy:** **`91.50%`** (366 / 400 correct classifications) for Full INT8 and **`88.50%`** (354 / 400) for Sparse CSR.
 * **30+ Classes with >87.5% - 100% Perfect Accuracy:**  
-  `breathing`, `chainsaw`, `chirping birds`, `church bells`, `clock alarm`, `clock tick`, `coughing`, `cow`, `crickets`, `crow`, `crying baby`, `dog`, `door wood knock`, `fireworks`, `frog`, `glass breaking`, `hand saw`, `helicopter`, `insects`, `pig`, `pouring water`, `rain`, `rooster`, `sea waves`, `siren`, `water drops`.
+  `brushing teeth`, `can opening`, `cat`, `chainsaw`, `chirping birds`, `church bells`, `clock alarm`, `clock tick`, `coughing`, `cow`, `crickets`, `crow`, `crying baby`, `dog`, `door wood knock`, `fireworks`, `frog`, `glass breaking`, `hand saw`, `helicopter`, `insects`, `pig`, `pouring water`, `rain`, `rooster`, `sea waves`, `siren`, `water drops`.
 
 ---
 
@@ -126,6 +125,7 @@ auto sparse_matvec_mult = [](
 ```text
 ├── models/
 │   ├── best_distilled_qat_model.pth        # 90.50% Flagship PyTorch Checkpoint (~500 KB)
+│   ├── confusion_matrix_efr32_int8_fixed_91.png # 50x50 Evaluation Heatmap (91.50% Full INT8)
 │   ├── confusion_matrix_esc50_91.png       # 50x50 Evaluation Heatmap (90.50% Flagship)
 │   ├── confusion_matrix_esp32_int8_89.png  # 50x50 Evaluation Heatmap (89.00% On-Chip INT8 ESP-DL)
 │   └── confusion_matrix_pruned_88_5.png    # 50x50 Evaluation Heatmap (88.50% Pruned CSR)
@@ -138,11 +138,11 @@ auto sparse_matvec_mult = [](
 │   └── generate_confusion_matrix.py        # Validation & Heatmap Generator
 │
 ├── export/
-│   ├── quantize_esc50_to_espdl.py          # ESP-PPQ INT8 Quantizer & Auditor for ESP32-S3
-│   ├── verify_efr32_hybrid_pipeline.py     # Bit-Exact 2-Stage On-Chip Pipeline Auditor for EFR32
-│   ├── export_clean_cnn_int8.py            # TFLM INT8 Header Generator for EFR32
+│   ├── export_cmsis_nn_cpp_graph.py        # Native CMSIS-NN C++ Weight & Graph Exporter
+│   ├── export_int8_fixed_gru_header.py     # 8-Bit Fixed-Point SIMD GRU Header Generator
+│   ├── verify_int8_fixed_point_gru.py      # Bit-Exact 91.50% INT8 SIMD Pipeline Auditor
 │   ├── export_golden_keyboard_pcm.py       # Bit-Exact Validation Audio Exporter
-│   └── simulate_onchip_inference.py        # Bit-Exact CPU Simulator
+│   └── quantize_esc50_to_espdl.py          # ESP-PPQ INT8 Quantizer & Auditor for ESP32-S3
 │
 ├── firmware/
 │   ├── esp32s3/                            # Seeed Studio XIAO ESP32-S3 Sense Project
@@ -154,7 +154,12 @@ auto sparse_matvec_mult = [](
 │   └── efr32mg24/                          # Silicon Labs xG24-DK2601B Project
 │       ├── CMakeLists.txt
 │       ├── prj.conf
-│       └── src/ (Dual Profiles: Flagship Dense & Sparse CSR Kernels)
+│       └── src/
+│           ├── cmsis_nn_cnn_engine.cpp     # 👑 Native CMSIS-NN Ping-Pong Execution Engine
+│           ├── cmsis_nn_cnn_weights.h      # Clean INT8 Quantized CNN Weights (Flash)
+│           ├── gru_classifier_weights_int8_fixed.h # 8-Bit Fixed SIMD GRU Weights & LUTs
+│           ├── inference.cpp               # Zero-BSS Memory Overlay (96.3 KB SRAM)
+│           └── config.h                    # Profile Selector (PROFILE_CMSIS_NN_PINGPONG_91)
 │
 ├── requirements.txt                        # Python Dependencies
 ├── .gitignore                              # Clean Repository Filters
@@ -166,6 +171,9 @@ auto sparse_matvec_mult = [](
 ## 🚀 Step-by-Step Reproduction Guide
 
 ### 1. Environment & Dataset Setup
+* **Recommended Python Version:** `Python 3.10` - `Python 3.12`
+* **Zephyr RTOS Toolchain:** Follow the official [Zephyr Getting Started Guide](https://docs.zephyrproject.org/latest/develop/getting_started/index.html) to set up `west`, the Zephyr SDK, and CMake.
+
 ```bash
 git clone https://github.com/egemen-akkoyunlu/tinyml-esc50-acoustic-classifier.git
 cd tinyml-esc50-acoustic-classifier
@@ -190,7 +198,21 @@ The training pipeline consists of two phases:
 
 ### 3. Target-Specific Model Export & Quantization
 
-Because ESP32-S3 and EFR32MG24 use different embedded acceleration engines, export follows target-specific pipelines:
+#### 🔹 For Silicon Labs EFR32MG24 (👑 Native CMSIS-NN Ping-Pong Engine - Profile 4):
+Exports the INT8 CNN weights directly for native CMSIS-NN C++ execution (eliminating TFLite Micro runtime overhead) and exports the inlined Fixed-Point SIMD GRU parameters:
+```bash
+# 1. Export Native CMSIS-NN INT8 CNN Weights & Quantization Shifts
+python export/export_cmsis_nn_cpp_graph.py
+# Outputs: firmware/efr32mg24/src/cmsis_nn_cnn_weights.h
+
+# 2. Export 8-Bit Fixed-Point SIMD GRU Weights & Flash LUTs
+python export/export_int8_fixed_gru_header.py
+# Outputs: firmware/efr32mg24/src/gru_classifier_weights_int8_fixed.h
+
+# 3. (Optional) Export Golden Verification Audio Header
+python export/export_golden_keyboard_pcm.py
+# Outputs: firmware/efr32mg24/src/golden_keyboard_typing_pcm.h
+```
 
 #### 🔹 For Espressif ESP32-S3 (Monolithic INT8 ESP-DL):
 Quantizes the full model into an INT8 binary accelerated by the 128-bit Xtensa PIE SIMD vector engine:
@@ -199,24 +221,23 @@ python export/quantize_esc50_to_espdl.py
 # Outputs: firmware/esp32s3/src/model.espdl (146.8 KB)
 ```
 
-#### 🔹 For Silicon Labs EFR32MG24 (2-Stage Hybrid TFLM + Cortex-M33 FPU):
-Splits the model into an INT8 2D CNN backbone for TFLite Micro and a hardware FPU-accelerated GRU classifier:
-```bash
-# 1. Export INT8 CNN Backbone to C Byte Array Header for TFLite Micro
-python export/export_clean_cnn_int8.py
-# Outputs: firmware/efr32mg24/src/phinet_features_model_data.h
-
-# 2. (Optional) Export Golden Verification Audio Header
-python export/export_golden_keyboard_pcm.py
-# Outputs: firmware/efr32mg24/src/golden_keyboard_typing_pcm.h
-```
-
 ### 4. Build & Flash Firmware
 
-#### 👑 Option A: Espressif ESP32-S3 Sense (Seeed Studio XIAO)
+#### 👑 Option A: Silicon Labs EFR32MG24 (xG24-DK2601B)
+
+The EFR32MG24 firmware compiles natively using Zephyr's built-in CMSIS-DSP, CMSIS-NN, and Cortex-M33 SIMD instructions with **zero external interpreter overhead**:
+
+```bash
+cd firmware/efr32mg24
+west build -p always -b xg24_dk2601b
+west flash
+screen /dev/ttyACM* 115200
+```
+
+#### 👑 Option B: Espressif ESP32-S3 Sense (Seeed Studio XIAO)
 
 > 💡 **ESP-DL on Zephyr Compatibility Layer:**  
-> Espressif's ESP-DL library natively targets ESP-IDF. This repository includes a custom **Zephyr-to-ESP-IDF compatibility shim layer** (`firmware/esp32s3/src/compat/`) that maps FreeRTOS mutexes, heap management, and hardware timers directly to Zephyr RTOS primitives without requiring the full ESP-IDF framework.
+> Espressif's ESP-DL library natively targets ESP-IDF. This repository includes a custom **Zephyr-to-ESP-IDF compatibility shim layer** (`firmware/esp32s3/src/compat/`) that maps FreeRTOS mutexes, heap management, and hardware timers directly to Zephyr RTOS primitives.
 
 1. **(One-time setup) Clone the official ESP-DL library:**
    ```bash
@@ -230,17 +251,6 @@ python export/export_golden_keyboard_pcm.py
    west flash
    west espressif monitor
    ```
-
-#### 👑 Option B: Silicon Labs EFR32MG24 (xG24-DK2601B)
-
-The EFR32MG24 firmware compiles natively using Zephyr's built-in CMSIS-DSP and standard C++ FPU math with **zero external library dependencies**:
-
-```bash
-cd firmware/efr32mg24
-west build -p always -b xg24_dk2601b
-west flash
-screen /dev/ttyACM* 115200
-```
 
 ---
 
