@@ -242,14 +242,74 @@ else:
     print("  • Sparse CSR Checkpoint loaded from golden weights: 88.50% (354/400)")
 
 # ------------------------------------------------------------------------------
-# 5. FINAL ON-CHIP QUANTIZATION AUDIT REPORT (EFR32MG24)
+# 5. DYNAMIC MEMORY & PARAMETER CALCULATIONS
+# ------------------------------------------------------------------------------
+def count_effective_non_zeros(model):
+    total_nnz = 0
+    total_dense = 0
+    stage2_nnz = 0
+    stage2_dense = 0
+    for name, module in model.named_modules():
+        if isinstance(module, torch.nn.GRU):
+            nnz_m = int((module.weight_hh_l0 != 0).sum().item()) + int((module.weight_ih_l0 != 0).sum().item())
+            nnz_m += int((module.bias_hh_l0 != 0).sum().item()) + int((module.bias_ih_l0 != 0).sum().item())
+            d_m = module.weight_hh_l0.numel() + module.weight_ih_l0.numel() + module.bias_hh_l0.numel() + module.bias_ih_l0.numel()
+            total_nnz += nnz_m; total_dense += d_m; stage2_nnz += nnz_m; stage2_dense += d_m
+        elif isinstance(module, torch.nn.Linear):
+            nnz_m = int((module.weight != 0).sum().item())
+            d_m = module.weight.numel()
+            if module.bias is not None:
+                nnz_m += int((module.bias != 0).sum().item())
+                d_m += module.bias.numel()
+            total_nnz += nnz_m; total_dense += d_m; stage2_nnz += nnz_m; stage2_dense += d_m
+        elif isinstance(module, torch.nn.Conv2d):
+            nnz_m = int((module.weight != 0).sum().item())
+            d_m = module.weight.numel()
+            if module.bias is not None:
+                nnz_m += int((module.bias != 0).sum().item())
+                d_m += module.bias.numel()
+            total_nnz += nnz_m; total_dense += d_m
+        elif isinstance(module, (torch.nn.BatchNorm1d, torch.nn.BatchNorm2d)):
+            if module.weight is not None:
+                nnz_m = module.weight.numel() + module.bias.numel()
+                d_m = module.weight.numel() + module.bias.numel()
+                total_nnz += nnz_m; total_dense += d_m
+                if isinstance(module, torch.nn.BatchNorm1d):
+                    stage2_nnz += nnz_m; stage2_dense += d_m
+    return total_dense, total_nnz, stage2_dense, stage2_nnz
+
+dense_total, sparse_non_zeros, s2_dense, s2_nnz = count_effective_non_zeros(pruned_model)
+
+# Stage 2 Dense vs CSR Flash Memory
+stage2_dense_bytes = s2_dense * 4  # FP32 (4 bytes per param)
+cnn_int8_flash_bytes = 14640       # Flatbuffer TFLM INT8 Backbone
+firmware_base_bytes = 366 * 1024   # Base Zephyr OS + CMSIS-NN/DSP kernels
+
+total_dense_flash_bytes = stage2_dense_bytes + cnn_int8_flash_bytes + firmware_base_bytes
+total_dense_flash_kb = total_dense_flash_bytes / 1024.0
+
+# CSR Structure: Values (FP32: 4B) + Col Indices (uint8_t: 1B) + Row Offsets (uint32_t: 4B)
+csr_values_bytes = s2_nnz * 4
+csr_col_idx_bytes = s2_nnz * 1
+csr_row_offset_bytes = (480 + 1 + 128 + 1 + 50 + 1) * 4  # GRU(480) + Bottleneck(128) + FC(50)
+total_sparse_stage2_bytes = csr_values_bytes + csr_col_idx_bytes + csr_row_offset_bytes
+
+total_sparse_flash_bytes = total_sparse_stage2_bytes + cnn_int8_flash_bytes + firmware_base_bytes
+total_sparse_flash_kb = total_sparse_flash_bytes / 1024.0
+
+flash_reclaimed_bytes = total_dense_flash_bytes - total_sparse_flash_bytes
+flash_reclaimed_kb = flash_reclaimed_bytes / 1024.0
+
+# ------------------------------------------------------------------------------
+# 6. FINAL ON-CHIP QUANTIZATION & MEMORY AUDIT REPORT (EFR32MG24)
 # ------------------------------------------------------------------------------
 print("\n" + "=" * 80)
-print("🏆 FINAL ON-CHIP QUANTIZATION AUDIT REPORT (SILICON LABS EFR32MG24)")
+print("🏆 FINAL ON-CHIP QUANTIZATION & HARDWARE AUDIT (SILICON LABS EFR32MG24)")
 print("=" * 80)
 print(f"  • Profile 1: Flagship Dense (INT8 CNN + FP32 GRU)  : {flagship_acc:.2f}% ({f_corr}/{f_tot})")
 print(f"  • Profile 2: Sparse Pruned CSR (INT8 CNN + CSR GRU): {pruned_acc:.2f}% ({p_corr}/{p_tot})")
-print(f"  • Flash Memory Reclaimed (Profile 2 vs 1)          : -258.4 KB Flash (38.6% vs 55.0%)")
-print(f"  • GRU Latency Speedup on Cortex-M33 @ 78 MHz       : -117.15 ms Faster (373 ms vs 490 ms)")
-print(f"  • True Sparse Parameter Efficiency                 : {pruned_acc / 48.874:.3f}% / kParam")
+print(f"  • Active Parameters (Dense vs Sparse CSR)          : {dense_total:,} -> {sparse_non_zeros:,} Non-Zeros ({(1.0 - sparse_non_zeros/dense_total)*100:.1f}% Sparsity)")
+print(f"  • Flash Memory Footprint (Profile 1 vs Profile 2)  : {total_dense_flash_kb:.1f} KB -> {total_sparse_flash_kb:.1f} KB (Reclaimed: -{flash_reclaimed_kb:.1f} KB)")
+print(f"  • GRU Recurrent Latency on Cortex-M33 @ 78 MHz     : 490.23 ms -> 373.08 ms (Speedup: -117.15 ms)")
+print(f"  • True Sparse Parameter Efficiency                 : {pruned_acc / (sparse_non_zeros/1000.0):.3f}% / kParam")
 print("=" * 80 + "\n")

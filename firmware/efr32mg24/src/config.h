@@ -33,7 +33,7 @@ extern "C" {
 /* ============================================================================
  * 🎛️ TINYML MODEL PROFILE CONFIGURATION (Select your Hardware Tier)
  * PROFILE_FLAGSHIP_DENSE_91 : 🏆 90.50% Accuracy, 80.4% Live Keystrokes (866 KB Flash, 490 ms GRU / 764 ms Total)
- * PROFILE_SPARSE_PRUNED_48K : ⚡ 88.50% Accuracy, CSR Zero-Skipping (607 KB Flash, 373 ms GRU / 647 ms Total)
+ * PROFILE_SPARSE_PRUNED_48K : ⚡ 88.50% Accuracy, CSR Zero-Skipping (620 KB Flash, 373 ms GRU / 647 ms Total)
  * ============================================================================ */
 #define PROFILE_FLAGSHIP_DENSE_91  1
 #define PROFILE_SPARSE_PRUNED_48K  2

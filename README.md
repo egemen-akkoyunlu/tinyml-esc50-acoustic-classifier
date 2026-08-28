@@ -30,7 +30,7 @@ Measured directly on physical edge hardware across live audio streams and held-o
 | :--- | :--- | :--- | :--- |
 | **Processor Architecture** | Xtensa LX7 Dual-Core @ 160 MHz | ARM Cortex-M33 @ 78 MHz | ARM Cortex-M33 @ 78 MHz |
 | **Hardware Acceleration** | Xtensa PIE (128-bit SIMD Vector Engine) | CMSIS-NN / MVP + Single-Cycle FPU | CMSIS-NN / MVP + Branchless CSR Zero-Skipping FPU |
-| **Active Model Parameters** | 124,866 (100% Dense INT8) | 124,866 (100% Dense Hybrid) | **`48,874 Active Non-Zeros`** (61.0% Sparsity) |
+| **Active Model Parameters** | 124,866 (100% Dense INT8) | 124,866 (100% Dense Hybrid) | **`52,930 Active Non-Zeros`** (57.6% Sparsity) |
 | **Model Quantization Scheme** | Full-Integer INT8 Layers + FP32 Softmax | 2-Stage Hybrid (INT8 CNN + Dense FPU GRU) | 2-Stage Hybrid (INT8 CNN + Sparse CSR FPU GRU) |
 | **Pre-Quant PyTorch QAT Accuracy** | **`90.50%`** (362 / 400 test clips) | **`90.50%`** (362 / 400 test clips) | **`88.50%`** (354 / 400 test clips) 🌟 |
 | **Post-Quantization On-Chip Accuracy** | **`89.00%`** (356 / 400 test clips) | **`90.25%`** (361 / 400 test clips) | **`88.50%`** (354 / 400 test clips) |
@@ -38,7 +38,7 @@ Measured directly on physical edge hardware across live audio streams and held-o
 | **Total ML Inference Time** | **`450.50 ms`** | **`764.49 ms`** | **`647.28 ms`** ⚡ *(**-117.21 ms Speedup!**)* |
 | **DSP Feature Extraction** | **`4.38 ms`** (ESP-DL Fbank) | **`59.45 ms`** (CMSIS-DSP + Pre-Emphasis) | **`59.45 ms`** (CMSIS-DSP + Pre-Emphasis) |
 | **Sustained Active Current / Power** | **`43.5 mA / 161 mW`** (Otii Arc Pro @ 3.3V) | *(Low-power wireless profile)* | *(Low-power wireless profile)* |
-| **Firmware Flash Memory Usage** | **`146.8 KB`** (`model.espdl` in Flash) | `866 KB (55.0% of Flash)` | **`607 KB (38.6% of Flash)`** 💾 *(**-258.4 KB Reclaimed!**)* |
+| **Firmware Flash Memory Usage** | **`146.8 KB`** (`model.espdl` in Flash) | `866 KB (55.0% of Flash)` | **`620 KB (39.4% of Flash)`** 💾 *(**-231 KB Reclaimed!**)* |
 | **Active Working SRAM** | **`~48 KB`** *(Internal SRAM)* | **`172 KB Arena + 33.8 KB Union Pool`** <sup>†</sup> | **`172 KB Arena + 33.8 KB Union Pool`** <sup>†</sup> |
 | **Live Mic Peak Confidence** | **`92.0%`** (`keyboard typing` sustained) | **`80.4%`** (`keyboard typing` peak) | **`69.9% (~70%)`** (`keyboard typing` calibrated) |
 
@@ -110,7 +110,7 @@ auto sparse_matvec_mult = [](
 ### 1. 🏆 Flagship 90.50% Dense Model
 ![Flagship Confusion Matrix](models/confusion_matrix_esc50_91.png)
 
-### 2. ⚡ Ultra-Compressed 88.50% Sparse Pruned Model (48.9k Parameters)
+### 2. ⚡ Ultra-Compressed 88.50% Sparse Pruned Model (52.9k Parameters)
 ![Pruned Confusion Matrix](models/confusion_matrix_pruned_88_5.png)
 
 * **Overall Accuracy:** **`88.50%`** (354 / 400 correct classifications).
