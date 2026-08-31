@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0+-EE4C2C.svg?style=flat&logo=pytorch)](https://pytorch.org/)
 [![Zephyr RTOS](https://img.shields.io/badge/Zephyr_RTOS-3.7+-800080.svg?style=flat&logo=zephyrproject)](https://zephyrproject.org/)
 [![Accuracy](https://img.shields.io/badge/ESC--50_Validation-91.50%25-brightgreen.svg)]()
-[![Hardware-ESP32-S3](https://img.shields.io/badge/ESP32--S3-112_ms_%7C_128_bit_SIMD-blue.svg)]()
+[![Hardware-ESP32-S3](https://img.shields.io/badge/ESP32--S3-144_ms_%7C_128_bit_SIMD-blue.svg)]()
 [![Hardware-EFR32MG24](https://img.shields.io/badge/EFR32MG24-Cortex--M33_%7C_414_ms_%7C_47_KB_Flash-orange.svg)]()
 [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/)
 
@@ -19,7 +19,7 @@ This repository contains the complete research, quantization-aware training pipe
 * **Zero-TFLM Memory Overhead:** Custom native C++ inference engines eliminate the 172 KB TensorFlow Lite Micro arena, executing inside a **96.3 KB shared ping-pong RAM buffer** (leaving >136 KB free SRAM).
 * **Dual-Target Real-Time Deployment:**
   1. **Silicon Labs EFR32MG24 (ARM Cortex-M33 @ 78 MHz):** Register-Tile Cached INT8 2D CNN + 1D Dilated TC-ResNet with `__SMLAD` Dual-MAC SIMD (**`414.24 ms` total ML latency**, **`87% live microphone confidence`**).
-  2. **Espressif ESP32-S3 Sense (Dual-Core LX7 @ 240 MHz):** 128-bit Xtensa PIE SIMD Vector acceleration (**`112.00 ms` total ML latency**, **`89.00% validation accuracy`**).
+  2. **Espressif ESP32-S3 Sense (Dual-Core LX7 @ 240 MHz):** 128-bit Xtensa PIE SIMD Vector acceleration with ESP-DL (**`144.22 ms` total ML latency**, **`98.3% live microphone confidence`**).
 
 ---
 
@@ -35,7 +35,7 @@ All metrics measured live on physical silicon with real audio streams:
 | **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,090 KB *(71%)* | 145.3 KB *(57%)* | 274.3 ms | 490.2 ms | **764.49 ms** | Native CMSIS-NN Ping-Pong Buffer (Zero TFLM Arena) |
 | **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | 1D Dilated TC-ResNet (93.7k INT8) |
 | **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms`** | 1D Dilated TC-ResNet + Channel Pruning (<50 KB Flash) |
-| **7** | **`ESP32-S3 PIE SIMD (Dual-Core)`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **89.00%** | **128.00 KB** | 850 KB *(11%)* | **80.00 KB *(16%)*** | **48.00 ms** | **64.00 ms** | **`112.00 ms`** | ESP-NN + 128-bit Vector PIE SIMD Pipeline |
+| **7** | **`PROFILE_ESP32S3_SLIM_TCN`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **78.75%** | **`82.78 KB`** | **1,046 KB *(12%)*** | **182.28 KB *(46%)*** | **~68 ms** | **~76 ms** | **`144.22 ms`** | ESP-DL + 128-bit Vector PIE SIMD INT8 Engine |
 
 ---
 

@@ -23,9 +23,9 @@ LOG_MODULE_DECLARE(esc50_app, LOG_LEVEL_INF);
 
 /* 
  * Define static memory slab pool for I2S DMA.
- * Allocates 128 blocks of I2S_BLOCK_SIZE bytes, aligned on 8-byte boundaries.
+ * Allocates 32 blocks of I2S_BLOCK_SIZE bytes (32 KB total DMA buffer).
  */
-K_MEM_SLAB_DEFINE_STATIC(rx_mem_slab, I2S_BLOCK_SIZE, 128, 8);
+K_MEM_SLAB_DEFINE_STATIC(rx_mem_slab, I2S_BLOCK_SIZE, 32, 8);
 
 static const struct device *i2s_dev = nullptr;
 

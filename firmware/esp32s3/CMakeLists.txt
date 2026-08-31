@@ -7,14 +7,30 @@ cmake_minimum_required(VERSION 3.20.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
 project(esc50_zephyr)
 
-# Include esp-dl path (located in parent directory)
-set(ESPDL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../streamable-kws/esp-dl/esp-dl)
-set(DL_FFT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../streamable-kws/esp-dl/tools/dl_fft)
+# Include esp-dl path (located in /home/acar/streamable-kws/esp-dl)
+if(NOT DEFINED ESPDL_PATH)
+    set(ESPDL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../streamable-kws/esp-dl/esp-dl)
+    if(NOT EXISTS ${ESPDL_PATH})
+        set(ESPDL_PATH /home/acar/streamable-kws/esp-dl/esp-dl)
+    endif()
+endif()
+
+if(NOT DEFINED DL_FFT_PATH)
+    set(DL_FFT_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../streamable-kws/esp-dl/tools/dl_fft)
+    if(NOT EXISTS ${DL_FFT_PATH})
+        set(DL_FFT_PATH /home/acar/streamable-kws/esp-dl/tools/dl_fft)
+    endif()
+endif()
 
 # ============================================================
 # ESP-IDF HAL Paths (for PDM support)
 # ============================================================
-set(ESP_HAL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../zephyrproject/modules/hal/espressif)
+if(NOT DEFINED ESP_HAL_PATH)
+    set(ESP_HAL_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../../../zephyrproject/modules/hal/espressif)
+    if(NOT EXISTS ${ESP_HAL_PATH})
+        set(ESP_HAL_PATH /home/acar/zephyrproject/modules/hal/espressif)
+    endif()
+endif()
 
 target_include_directories(app PRIVATE
     src/compat
