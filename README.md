@@ -14,9 +14,9 @@
 
 This repository contains the complete research, quantization-aware training pipeline, and production-grade embedded firmware implementation for an **Ultra-Efficient TinyML Environmental Audio Classifier** on the **ESC-50** dataset (50 environmental sound classes).
 
-* **Model Footprint Champion:** **`47.57 KB Flash Weights`** — fits comfortably within the strictest ultra-low-power microcontrollers (<50 KB Flash budget, zero external SPI flash required).
-* **High-Accuracy Flagship:** **`91.50% Validation Accuracy`** (366/400 correct classifications), outperforming the human ear baseline (**81.30%**) by **+10.20%**.
-* **Zero-TFLM Memory Overhead:** Custom native C++ inference engines eliminate the 172 KB TensorFlow Lite Micro arena, executing inside a lean **96.3 KB shared ping-pong RAM buffer** (with >136 KB free SRAM).
+* **Sub-50 KB Memory Footprint:** **`47.57 KB Flash Weights`** — operates directly from internal microcontroller Flash without external SPI Flash requirements.
+* **Classification Accuracy:** **`91.50% Validation Accuracy`** (366/400 correct classifications on held-out test audio), exceeding the human listener baseline (**81.30%**) by **+10.20%**.
+* **Zero-TFLM Memory Overhead:** Custom native C++ inference engines eliminate the 172 KB TensorFlow Lite Micro arena, executing inside a **96.3 KB shared ping-pong RAM buffer** (leaving >136 KB free SRAM).
 * **Dual-Target Real-Time Deployment:**
   1. **Silicon Labs EFR32MG24 (ARM Cortex-M33 @ 78 MHz):** Register-Tile Cached INT8 2D CNN + 1D Dilated TC-ResNet with `__SMLAD` Dual-MAC SIMD (**`414.24 ms` total ML latency**, **`87% live microphone confidence`**).
   2. **Espressif ESP32-S3 Sense (Dual-Core LX7 @ 240 MHz):** 128-bit Xtensa PIE SIMD Vector acceleration (**`112.00 ms` total ML latency**, **`89.00% validation accuracy`**).
@@ -88,8 +88,8 @@ All metrics measured live on physical silicon with real audio streams:
 ## ⚡ Engineering Pillars
 
 ### 1. 🪟 3x3 Register-Tile Caching (Stage 1 Acceleration)
-In naive 2D convolutions, the CPU re-reads the $3\times3$ input patch for every output channel, causing **587,808 non-contiguous RAM accesses**.  
-By pinning the $3\times3$ window into 9 CPU registers (`p0..p8`) and evaluating all 16 channels via `#pragma GCC unroll 16`, memory bus traffic dropped by **$16\times$ (down to 36,738 reads)**, cutting Stage 1 latency from **`355.13 ms` $\to$ `216.77 ms`**!
+In standard 2D convolutions, the CPU re-reads the $3\times3$ input patch for every output channel, generating 587,808 non-contiguous RAM accesses.  
+By pinning the $3\times3$ window into 9 CPU registers (`p0..p8`) and evaluating all 16 channels via `#pragma GCC unroll 16`, memory bus traffic is reduced by $16\times$ (down to 36,738 reads), lowering Stage 1 latency from `355.13 ms` to `216.77 ms`.
 
 ### 2. ✂️ Structured Channel Pruning (<50 KB Flash Tier)
 By pruning the intermediate feature channels from $128 \to 96 \to 64$, model weights shrunk from **92.86 KB $\to$ 47.57 KB ($-48.8\%$)**, allowing the entire model to run directly from internal microcontroller Flash with zero external storage requirements.
