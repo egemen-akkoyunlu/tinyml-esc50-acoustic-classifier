@@ -51,6 +51,36 @@ Below is the 50x50 multi-class confusion matrix for the **90.50% High-Accuracy M
 
 ## 🧠 Architectural Highlights
 
+### 1. High-Accuracy Architecture: 2-Stage PhiNet + GRU (91.50% Validation Accuracy)
+
+```text
+ ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ INPUT: Raw 16 kHz Audio (5.0s) ➔ Mel Spectrogram [52 Mel Bins x 313 Time Steps] (Signed INT8)│
+ └──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                                │
+                                                ▼
+ ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ STAGE 1: INT8 2D PhiNet CNN Backbone (16 -> 32 -> 48 Channels)                              │
+ │  • Layer 1 Stem Conv2D: 1 -> 16 Channels (Stride 2x2, Padding 1)                            │
+ │  • Layer 2-3 Inverted Bottleneck Block 0: 16 -> 32 Channels (Stride 1x2)      │
+ │  • Layer 4-5 Inverted Bottleneck Block 1: 32 -> 48 Channels (Stride 2x2)      │
+ │  • Conv Compress & Time Pooling: 48 -> 32 Channels, 13 -> 1 Freq, 313 -> 39 Time Steps      │
+ │  • Output: [1, 39, 32] Sequence (39 Time Steps x 32 Features)                               │
+ └──────────────────────────────────────────────┬──────────────────────────────────────────────┘
+                                                │
+                                                ▼
+ ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+ │ STAGE 2: Sequence GRU & Temporal Attention Classifier Head                                  │
+ │  • Pre-GRU BatchNorm1D on 32 features                                                       │
+ │  • 128-Unit Recurrent GRU (39 Time Steps, Unidirectional)                                   │
+ │  • Softmax Temporal Attention: Mean Pooling -> Softmax Weighting -> 128-dim Context Vector  │
+ │  • Post-GRU BatchNorm1D + Linear Bottleneck (128 -> 64) + ReLU6                             │
+ │  • 50-Class Dense Classification Head (64 -> 50 Logits)                                     │
+ └─────────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+### 2. Ultra-Lightweight Architecture: Sub-50 KB 1D Dilated TC-ResNet (<50 KB Flash Tier)
+
 ```text
  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
  │ INPUT: Raw 16 kHz Audio (5.0s) ➔ Mel Spectrogram [52 Mel Bins x 313 Time Steps] (Signed INT8)│
