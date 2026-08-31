@@ -33,8 +33,8 @@ All metrics measured live on physical silicon with real audio streams:
 | **2** | **`PROFILE_SPARSE_PRUNED_48K`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **88.50%** | 620.0 KB | 875 KB *(57%)* | 212.0 KB *(83%)* | 274.2 ms | 373.1 ms | **647.32 ms** | TFLM + CSR Zero-Skipping FPU GRU |
 | **3** | **`PROFILE_INT8_FIXED_SIMD_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.00%** | 720.0 KB | 975 KB *(64%)* | 212.0 KB *(83%)* | 274.3 ms | 310.5 ms | **584.80 ms** | TFLM + Fixed-Point INT8/INT16 SIMD GRU (`__SMLAD`) |
 | **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,090 KB *(71%)* | 145.3 KB *(57%)* | 274.3 ms | 490.2 ms | **764.49 ms** | Native CMSIS-NN Ping-Pong Buffer (Zero TFLM Arena) |
-| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | Frequency-Folded 1D Dilated TC-ResNet (93.7k INT8) |
-| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms`** | Register-Tile Caching + Structured Channel Pruning (<50 KB Flash) |
+| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | 1D Dilated TC-ResNet (93.7k INT8) |
+| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms`** | 1D Dilated TC-ResNet + Channel Pruning (<50 KB Flash) |
 | **7** | **`ESP32-S3 PIE SIMD (Dual-Core)`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **89.00%** | **128.00 KB** | 850 KB *(11%)* | **80.00 KB *(16%)*** | **48.00 ms** | **64.00 ms** | **`112.00 ms`** | ESP-NN + 128-bit Vector PIE SIMD Pipeline |
 
 ---
@@ -48,20 +48,20 @@ All metrics measured live on physical silicon with real audio streams:
                                                 │
                                                 ▼
  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
- │ STAGE 1: Register-Tile Cached INT8 2D PhiNet Backbone (16 -> 24/32 Channels)               │
- │  • Layer 1 Stem Conv2D 3x3 (s=2x2): 9-Register In-CPU Tile Caching (16x Memory Reduction!) │
- │  • Layer 2/4 Depthwise Conv2D 3x3: Direct Row-Pointer Stencil Addressing                    │
- │  • Layer 3/5 Pointwise Conv2D 1x1: Cortex-M33 __SMLAD Dual-MAC SIMD (2 MACs / Cycle)       │
+ │ STAGE 1: INT8 2D PhiNet Backbone (16 -> 24/32 Channels)                                     │
+ │  • Layer 1 Stem Conv2D 3x3 (s=2x2): 9-Register In-CPU Tile Caching                          │
+ │  • Layer 2/4 Depthwise Conv2D 3x3: Direct Row-Pointer Addressing                            │
+ │  • Layer 3/5 Pointwise Conv2D 1x1: Cortex-M33 __SMLAD Dual-MAC SIMD                         │
  │  • Output: [13 Frequency Bins x 40 Time Frames x 24 Channels]                              │
  └──────────────────────────────────────────────┬──────────────────────────────────────────────┘
                                                 │
-                                                ▼ (Zero-Parameter Acoustic Frequency Folding)
+                                                ▼
  ┌─────────────────────────────────────────────────────────────────────────────────────────────┐
- │ FREQUENCY-TO-CHANNEL FOLDING: 13 Bins -> 4 Sub-Bands x 24 Channels = 96 Channels           │
- │  • Sub-Band 0 (0 - 1.2 kHz)  : Baselines (Knocks, footsteps, thunder)                       │
- │  • Sub-Band 1 (1.2 - 2.8 kHz): Vocal / Mid-range (Speech, animal calls)                    │
+ │ 2D-TO-1D RESHAPE & SUB-BAND POOLING: 13 Bins -> 4 Sub-Bands x 24 Channels = 96 Channels     │
+ │  • Sub-Band 0 (0 - 1.2 kHz)  : Low frequencies (Knocks, footsteps, thunder)                 │
+ │  • Sub-Band 1 (1.2 - 2.8 kHz): Mid frequencies (Speech, animal vocalizations)               │
  │  • Sub-Band 2 (2.8 - 4.8 kHz): Upper-Mid (Keyboard typing, glass clicks, bell rings)       │
- │  • Sub-Band 3 (4.8 - 8.0 kHz): Treble (Crickets, hiss, high harmonics)                     │
+ │  • Sub-Band 3 (4.8 - 8.0 kHz): High frequencies (Crickets, hiss, harmonics)                │
  └──────────────────────────────────────────────┬──────────────────────────────────────────────┘
                                                 │
                                                 ▼
