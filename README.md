@@ -41,10 +41,10 @@ All metrics measured live on physical silicon with real audio streams:
 
 ## 📈 Confusion Matrix & Validation Results
 
-Below is the 50x50 multi-class confusion matrix for the **91.50% High-Accuracy Model** evaluated on the 400 held-out test clips (8 clips per class across all 50 categories):
+Below is the 50x50 multi-class confusion matrix evaluated on the 400 held-out test clips (8 clips per class across all 50 categories):
 
 <p align="center">
-  <img src="assets/confusion_matrix_91_5.png" alt="ESC-50 Confusion Matrix (91.50% Accuracy)" width="720">
+  <img src="assets/confusion_matrix_91_5.png?raw=true" alt="ESC-50 Confusion Matrix" width="750">
 </p>
 
 ---
