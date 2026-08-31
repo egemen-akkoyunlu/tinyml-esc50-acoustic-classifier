@@ -23,7 +23,7 @@ This repository contains the complete research, quantization-aware training pipe
 
 ---
 
-### 📊 Master Benchmark: All 7 Hardware Profiles
+### 📊 Master Benchmark: All 8 Hardware Profiles
 
 All metrics measured live on physical silicon with real audio streams:
 
@@ -35,7 +35,8 @@ All metrics measured live on physical silicon with real audio streams:
 | **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,090 KB *(71%)* | 145.3 KB *(57%)* | 274.3 ms | 490.2 ms | **764.49 ms** | Native CMSIS-NN Ping-Pong Buffer (Zero TFLM Arena) |
 | **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | 1D Dilated TC-ResNet (93.7k INT8) |
 | **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms`** | 1D Dilated TC-ResNet + Channel Pruning (<50 KB Flash) |
-| **7** | **`PROFILE_ESP32S3_SLIM_TCN`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **78.75%** | **`82.78 KB`** | **1,046 KB *(12%)*** | **182.28 KB *(46%)*** | **~68 ms** | **~76 ms** | **`144.22 ms`** | ESP-DL + 128-bit Vector PIE SIMD INT8 Engine |
+| **7** | **`PROFILE_ESP32S3_FLAGSHIP_89`**<br>*(ESP32-S3 - LX7 @ 160 MHz)* | **89.00%** | **146.80 KB** | 1,110 KB *(13%)* | 378.00 KB *(95%)* | — | — | **`450.50 ms`** | ESP-DL Monolithic INT8 + 128-bit Vector PIE SIMD |
+| **8** | **`PROFILE_ESP32S3_SLIM_TCN_79`**<br>*(ESP32-S3 - LX7 @ 160 MHz)* | **78.75%** | **`82.78 KB`** | **1,046 KB *(12%)*** | **182.28 KB *(46%)*** | — | — | **`144.22 ms`** | ESP-DL 128-bit PIE SIMD INT8 + DRAM Optimization |
 
 ---
 
