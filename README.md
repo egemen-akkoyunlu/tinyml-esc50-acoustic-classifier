@@ -23,19 +23,19 @@ This repository contains the complete research, quantization-aware training pipe
 
 ---
 
-## 📊 Multi-Target Hardware & Profile Master Benchmarks
+#### 📊 Master Benchmark: All 7 Hardware Profiles
 
 All metrics measured live on physical silicon with real audio streams:
 
-| # | Profile Name | Target MCU & Clock | Accuracy (ESC-50) | Model Flash | Total Firmware Flash | Total SRAM Used | Stage 1 (2D CNN) | Stage 2 (Sequence Head) | Total ML Latency | Key Hardware / Architectural Mechanism |
+| # | Profile & Target Architecture | Accuracy | Model Flash | Firmware Flash | Total SRAM | Stage 1 (2D CNN) | Stage 2 (Seq Head) | Total ML Latency | Key Optimization |
 | :-: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1** | **`PROFILE_FLAGSHIP_DENSE_91`** | Cortex-M33 @ 78 MHz | **`91.50%`** | 866.0 KB | 1,120 KB *(73.0%)* | 212.0 KB *(82.8%)* | 274.30 ms | 490.20 ms *(Dense GRU)* | **`764.49 ms`** | TFLM Interpreter (172 KB Arena) + FP32 Dense GRU |
-| **2** | **`PROFILE_SPARSE_PRUNED_48K`** | Cortex-M33 @ 78 MHz | **`88.50%`** | 620.0 KB | 875 KB *(57.0%)* | 212.0 KB *(82.8%)* | 274.20 ms | 373.12 ms *(CSR GRU)* | **`647.32 ms`** | TFLM + Compressed Sparse Row (CSR) Zero-Skipping FPU |
-| **3** | **`PROFILE_INT8_FIXED_SIMD_91`** | Cortex-M33 @ 78 MHz | **`91.00%`** | 720.0 KB | 975 KB *(63.5%)* | 212.0 KB *(82.8%)* | 274.30 ms | 310.50 ms *(SIMD GRU)* | **`584.80 ms`** | TFLM + Fixed-Point INT8/INT16 SIMD GRU (`__SMLAD`) |
-| **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`** | Cortex-M33 @ 78 MHz | **`91.50%`** | 866.0 KB | 1,090 KB *(71.0%)* | 145.30 KB *(56.6%)* | 274.30 ms | 490.20 ms *(Dense GRU)* | **`764.49 ms`** | **Zero TFLM Arena!** Native CMSIS-NN 98 KB Ping-Pong |
-| **5** | **`PROFILE_TCN_85` (Standard)** | Cortex-M33 @ 78 MHz | **`85.25%`** | 92.86 KB | 468 KB *(29.8%)* | **119.38 KB *(45.5%)*** | 271.79 ms | 392.85 ms *(1D TCN)* | **`664.64 ms`** | **RNN-Free!** Frequency-Folded 1D TC-ResNet (93.7k INT8) |
-| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)** | Cortex-M33 @ 78 MHz | **`80.50%`** | **`47.57 KB`** | **398 KB *(25.3%)*** | **119.38 KB *(45.5%)*** | **216.77 ms** | **197.48 ms *(Slim TCN)*** | **`414.24 ms` ⚡** | **Sub-50 KB Flash & Sub-500 ms Latency Champion!** |
-| **7** | **`ESP32-S3 PIE SIMD (Dual-Core)`** | Xtensa LX7 @ 240 MHz | **`89.00%`** | **`128.00 KB`** | 850 KB *(10.6%)* | **80.00 KB *(15.6%)*** | **48.00 ms** | **64.00 ms *(PIE SIMD)*** | **`112.00 ms` 🚀** | **ESP-NN + 128-bit Vector PIE SIMD Pipeline** |
+| **1** | **`PROFILE_FLAGSHIP_DENSE_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,120 KB *(73%)* | 212.0 KB *(83%)* | 274.3 ms | 490.2 ms | **764.49 ms** | TFLM Interpreter (172 KB Arena) + FP32 Dense GRU |
+| **2** | **`PROFILE_SPARSE_PRUNED_48K`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **88.50%** | 620.0 KB | 875 KB *(57%)* | 212.0 KB *(83%)* | 274.2 ms | 373.1 ms | **647.32 ms** | TFLM + CSR Zero-Skipping FPU GRU |
+| **3** | **`PROFILE_INT8_FIXED_SIMD_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.00%** | 720.0 KB | 975 KB *(64%)* | 212.0 KB *(83%)* | 274.3 ms | 310.5 ms | **584.80 ms** | TFLM + Fixed-Point INT8/INT16 SIMD GRU (`__SMLAD`) |
+| **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,090 KB *(71%)* | 145.3 KB *(57%)* | 274.3 ms | 490.2 ms | **764.49 ms** | **Zero TFLM Arena!** Native CMSIS-NN 98 KB Ping-Pong |
+| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | **RNN-Free!** Folded 1D TC-ResNet (93.7k INT8) |
+| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms` ⚡** | **Sub-50 KB Flash & Sub-500 ms Latency Champion!** |
+| **7** | **`ESP32-S3 PIE SIMD (Dual-Core)`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **89.00%** | **128.00 KB** | 850 KB *(11%)* | **80.00 KB *(16%)*** | **48.00 ms** | **64.00 ms** | **`112.00 ms` 🚀** | **ESP-NN + 128-bit Vector PIE SIMD Pipeline** |
 
 ---
 
