@@ -29,9 +29,9 @@ project_root = os.path.abspath(os.path.join(curr_dir, "..")) if os.path.basename
 checkpoint_path = os.path.join(project_root, "models", "best_distilled_qat_model.pth")
 if not os.path.exists(checkpoint_path):
     checkpoint_path = os.path.join(project_root, "best_distilled_qat_model.pth")
-
 dataset_root = os.path.join(project_root, "ESC-50-master")
-output_png = os.path.join(project_root, "models", "confusion_matrix_esc50_91.png") if os.path.exists(os.path.join(project_root, "models")) else os.path.join(project_root, "confusion_matrix_esc50_91.png")
+output_png = os.path.join(project_root, "assets", "confusion_matrix_91_5.png")
+os.makedirs(os.path.dirname(output_png), exist_ok=True)
 
 # 1. Dataset Loader Matching Training Pipeline Exactly
 class ESC50(Dataset):
