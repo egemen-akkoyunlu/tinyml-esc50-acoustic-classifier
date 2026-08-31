@@ -15,6 +15,8 @@
 #elif (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
     #include "cmsis_nn_cnn_engine.h"
     #include "gru_classifier_weights_int8_fixed.h"
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
+    #include "tcn_inference_engine.h"
 #endif
 
 #include <tensorflow/lite/micro/micro_interpreter.h>
@@ -38,30 +40,34 @@
  * ZERO memory overwrite collision during inference!
  * ============================================================================ */
 union alignas(16) InferenceMemoryPool {
-#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91 || ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
     struct {
-        int8_t ping_pong_A[65728]; // 64.2 KB (Layers 1, 3, 5 Output & Stage 2 GRU State)
-        int8_t ping_pong_B[32864]; // 32.1 KB (Input Spectrogram & Layers 2, 4, 6 Output)
+        int8_t ping_pong_A[65728]; // 64.2 KB (Layer 1 Stem Conv2D [26x157x16] = 65,312 Bytes)
+        int8_t ping_pong_B[32864]; // 32.1 KB (Input Spectrogram [52x313] & Layer 2 Output)
     } cmsis_nn;
 #else
     uint8_t tensor_arena[TFLM_TENSOR_ARENA_SIZE];
 #endif
+#if (ACTIVE_MODEL_PROFILE != PROFILE_TCN_85 && ACTIVE_MODEL_PROFILE != PROFILE_SLIM_TCN_81)
     struct {
         alignas(16) float s_features[GRU_TIME_STEPS][GRU_INPUT_DIM]; // 5.0 KB (in ping_pong_A)
         alignas(16) float s_H[GRU_TIME_STEPS][GRU_HIDDEN_DIM];       // 24.9 KB (in ping_pong_A)
         alignas(16) float s_gate_x[3 * GRU_HIDDEN_DIM];              // 1.9 KB (in ping_pong_A)
         alignas(16) float s_gate_h[3 * GRU_HIDDEN_DIM];              // 1.9 KB (in ping_pong_A)
     } stage2;
+#endif
 };
 
 static InferenceMemoryPool s_mem_pool;
-#if (ACTIVE_MODEL_PROFILE != PROFILE_CMSIS_NN_PINGPONG_91)
+#if (ACTIVE_MODEL_PROFILE != PROFILE_CMSIS_NN_PINGPONG_91 && ACTIVE_MODEL_PROFILE != PROFILE_TCN_85 && ACTIVE_MODEL_PROFILE != PROFILE_SLIM_TCN_81)
 #define tensor_arena (s_mem_pool.tensor_arena)
 #endif
+#if (ACTIVE_MODEL_PROFILE != PROFILE_TCN_85 && ACTIVE_MODEL_PROFILE != PROFILE_SLIM_TCN_81)
 #define s_features   (s_mem_pool.stage2.s_features)
 #define s_H          (s_mem_pool.stage2.s_H)
 #define s_gate_x     (s_mem_pool.stage2.s_gate_x)
 #define s_gate_h     (s_mem_pool.stage2.s_gate_h)
+#endif
 #define s_input_spectrogram (s_mem_pool.cmsis_nn.ping_pong_B)
 #define s_stage1_cnn_features (s_mem_pool.cmsis_nn.ping_pong_B)
 
@@ -79,7 +85,15 @@ extern "C" int inference_init(void) {
     printf(" 🚀 2-STAGE HYBRID TINYML INFERENCE ENGINE INIT\n");
     printf("========================================================\n");
 
-#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+#if (ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
+    tcn_inference_init();
+    printf("   • Profile   : 1D Dilated TC-ResNet (%s)\n",
+           (ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81) ? "Slim 48k Pruned, 80.50% INT8, 47.6 KB Flash" : "Standard 93k, 85.25% INT8, 92.8 KB Flash");
+    printf("   • Engine    : Native C++ Zero-Copy SIMD Pipeline (<10.2 KB SRAM)\n");
+    printf("========================================================\n\n");
+    is_inference_initialized = true;
+    return 0;
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
     cmsis_nn_cnn_init();
     printf("   • Profile   : Native CMSIS-NN Ping-Pong CNN (98.5 KB SRAM vs 172 KB TFLM!)\n");
     printf("   • Stage 2   : Inlined ARM DSP __SMLAD Fixed-Point GRU Head\n");
@@ -160,7 +174,7 @@ extern "C" int inference_init(void) {
 }
 
 extern "C" void* inference_get_input_tensor_ptr(void) {
-#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91 || ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
     return s_input_spectrogram;
 #else
     if (!is_inference_initialized) {
@@ -174,7 +188,7 @@ extern "C" void* inference_get_input_tensor_ptr(void) {
 }
 
 extern "C" bool inference_is_input_int8(void) {
-#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91 || ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
     return true;
 #else
     if (!is_inference_initialized) {
@@ -185,7 +199,10 @@ extern "C" bool inference_is_input_int8(void) {
 }
 
 extern "C" void inference_get_input_quant_params(float *out_scale, int32_t *out_zero_point) {
-#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+#if (ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
+    if (out_scale) *out_scale = 0.09229838f;
+    if (out_zero_point) *out_zero_point = 22;
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
     if (out_scale) *out_scale = 0.09312528f;
     if (out_zero_point) *out_zero_point = 20;
 #else
@@ -209,6 +226,9 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
 
     const int8_t *in_int8 = (const int8_t*)inference_get_input_tensor_ptr();
 
+#if (ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
+    return tcn_inference_run(in_int8, s_mem_pool.cmsis_nn.ping_pong_A, s_mem_pool.cmsis_nn.ping_pong_B, out_class_id, out_confidence);
+#else
     printf("\n  🔍 ON-CHIP FORENSICS:\n");
 #if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
     printf("    • Pipeline   : Native CMSIS-NN Ping-Pong (Buffer A: 64.2 KB | Buffer B: 32.1 KB)\n");
@@ -627,6 +647,7 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     if (out_confidence) *out_confidence = confidence;
 
     return 0;
+#endif
 }
 
 extern "C" const char* inference_get_class_name(int class_id) {

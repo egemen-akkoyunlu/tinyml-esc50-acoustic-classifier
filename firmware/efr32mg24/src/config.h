@@ -28,21 +28,25 @@ extern "C" {
 #define MODE_AUDIO_DUMP_TO_PC      1
 #define MODE_INJECT_GOLDEN_SAMPLE  2
 
-#define FIRMWARE_OPERATION_MODE    MODE_REALTIME_INFERENCE
+#define FIRMWARE_OPERATION_MODE    MODE_REALTIME_INFERENCE /* Default Mode: Benchmark Golden Pre-Recorded Audio (No Mic) */
 
 /* ============================================================================
  * 🎛️ TINYML MODEL PROFILE CONFIGURATION (Select your Hardware Tier)
  * PROFILE_FLAGSHIP_DENSE_91   : 🏆 90.50% Accuracy, 80.4% Live Keystrokes (866 KB Flash, 490 ms GRU / 764 ms Total)
  * PROFILE_SPARSE_PRUNED_48K   : ⚡ 88.50% Accuracy, CSR Zero-Skipping (620 KB Flash, 373 ms GRU / 647 ms Total)
  * PROFILE_INT8_FIXED_SIMD_91  : 🚀 91.50% Accuracy, Full 5.0s INT8 SIMD (586 KB Flash, 172 KB Arena, 229 ms GRU)
- * PROFILE_CMSIS_NN_PINGPONG_91: 👑 91.50% Accuracy, Native CMSIS-NN Ping-Pong (540 KB Flash, 98 KB Arena, 55% SRAM!) [RECOMMENDED]
+ * PROFILE_CMSIS_NN_PINGPONG_91: 👑 91.50% Accuracy, Native CMSIS-NN Ping-Pong (540 KB Flash, 98 KB Arena, 55% SRAM!)
+ * PROFILE_TCN_85              : ⚡ 85.25% Accuracy, 1D Dilated TC-ResNet (~92.8 KB Flash, 10.2 KB SRAM)
+ * PROFILE_SLIM_TCN_81         : 🪶 80.50% Accuracy, Slim Channel-Pruned TCN (~47.6 KB Flash, 7.5 KB SRAM) [<50 KB]
  * ============================================================================ */
 #define PROFILE_FLAGSHIP_DENSE_91    1
 #define PROFILE_SPARSE_PRUNED_48K    2
 #define PROFILE_INT8_FIXED_SIMD_91   3
 #define PROFILE_CMSIS_NN_PINGPONG_91 4
+#define PROFILE_TCN_85               5
+#define PROFILE_SLIM_TCN_81          6
 
-#define ACTIVE_MODEL_PROFILE         PROFILE_CMSIS_NN_PINGPONG_91
+#define ACTIVE_MODEL_PROFILE         PROFILE_SLIM_TCN_81 /* Default Model Profile: Slim Channel-Pruned TCN (~47.6 KB Flash, 7.5 KB SRAM) [<50 KB] */
 
 #define ENABLE_STREAMING_INFERENCE         true
 #define ENABLE_BLE_COMMUNICATION           false /* Set to false for standalone microphone audio inference over UART */

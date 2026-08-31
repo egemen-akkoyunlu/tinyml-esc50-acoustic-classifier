@@ -52,11 +52,9 @@ static void compute_frame_power_spectrum_onthefly(
             if (audio_idx < 0) audio_idx = 0;
         }
 
-        int prev_idx = (audio_idx > 0) ? audio_idx - 1 : audio_idx;
         float raw_curr = (float)(raw_pcm[audio_idx] - dc_offset) / 32768.0f;
-        float raw_prev = (float)(raw_pcm[prev_idx] - dc_offset) / 32768.0f;
-        /* 1st-Order Pre-Emphasis Filter: y[n] = x[n] - 0.95 * x[n-1] */
-        float sample_val = raw_curr - 0.95f * raw_prev;
+        /* Bit-Exact Standard Torchaudio Windowing (No pre-emphasis distortion) */
+        float sample_val = raw_curr;
         fft_buf[n] = sample_val * HANN_WINDOW_512[n];
     }
 
@@ -295,10 +293,7 @@ void audio_preprocess_tile_chunk_direct(
             float sample_val = 0.0f;
             int sample_idx = sample_offset + n;
             if (sample_idx >= 0 && sample_idx < num_samples) {
-                float raw_curr = (float)(new_pcm_chunk[sample_idx] - dc_offset) / 32768.0f;
-                float raw_prev = (sample_idx > 0) ? (float)(new_pcm_chunk[sample_idx - 1] - dc_offset) / 32768.0f : raw_curr;
-                /* 1st-Order Pre-Emphasis Filter: y[n] = x[n] - 0.95 * x[n-1] (Sharpens transient clicks & eliminates noise floor) */
-                sample_val = raw_curr - 0.95f * raw_prev;
+                sample_val = (float)(new_pcm_chunk[sample_idx] - dc_offset) / 32768.0f;
             }
             fft_buf[n] = sample_val * HANN_WINDOW_512[n];
         }

@@ -31,6 +31,30 @@ tf_saved_model*/
 tf_cnn_int8*/
 tflite_models*/
 onnx_models*/
+tf_streaming_int8/
+quantization_files/
+spec_parameter_testing/
+curves_*/
+esc50_phinetcrnn/
+
+# Temporary Scratch / Debug Scripts
+debug_*.py
+inspect_*.py
+diagnose_*.py
+test_*.py
+step*.py
+convert_*.py
+verify_*.py
+check_*.py
+export_*.py
+slice_*.py
+plot_*.py
+run_*.py
+colab_*.py
+train_*.py
+!training/train_tcn_*.py
+!training/eval_*.py
+!training/qat_training.py
 
 # Build Directories (Zephyr RTOS, CMake, ESP-IDF)
 build/
