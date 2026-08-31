@@ -23,7 +23,7 @@ This repository contains the complete research, quantization-aware training pipe
 
 ---
 
-#### 📊 Master Benchmark: All 7 Hardware Profiles
+### 📊 Master Benchmark: All 7 Hardware Profiles
 
 All metrics measured live on physical silicon with real audio streams:
 
@@ -32,10 +32,10 @@ All metrics measured live on physical silicon with real audio streams:
 | **1** | **`PROFILE_FLAGSHIP_DENSE_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,120 KB *(73%)* | 212.0 KB *(83%)* | 274.3 ms | 490.2 ms | **764.49 ms** | TFLM Interpreter (172 KB Arena) + FP32 Dense GRU |
 | **2** | **`PROFILE_SPARSE_PRUNED_48K`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **88.50%** | 620.0 KB | 875 KB *(57%)* | 212.0 KB *(83%)* | 274.2 ms | 373.1 ms | **647.32 ms** | TFLM + CSR Zero-Skipping FPU GRU |
 | **3** | **`PROFILE_INT8_FIXED_SIMD_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.00%** | 720.0 KB | 975 KB *(64%)* | 212.0 KB *(83%)* | 274.3 ms | 310.5 ms | **584.80 ms** | TFLM + Fixed-Point INT8/INT16 SIMD GRU (`__SMLAD`) |
-| **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,090 KB *(71%)* | 145.3 KB *(57%)* | 274.3 ms | 490.2 ms | **764.49 ms** | **Zero TFLM Arena!** Native CMSIS-NN 98 KB Ping-Pong |
-| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | **RNN-Free!** Folded 1D TC-ResNet (93.7k INT8) |
-| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms` ⚡** | **Sub-50 KB Flash & Sub-500 ms Latency Champion!** |
-| **7** | **`ESP32-S3 PIE SIMD (Dual-Core)`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **89.00%** | **128.00 KB** | 850 KB *(11%)* | **80.00 KB *(16%)*** | **48.00 ms** | **64.00 ms** | **`112.00 ms` 🚀** | **ESP-NN + 128-bit Vector PIE SIMD Pipeline** |
+| **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 1,090 KB *(71%)* | 145.3 KB *(57%)* | 274.3 ms | 490.2 ms | **764.49 ms** | Native CMSIS-NN Ping-Pong Buffer (Zero TFLM Arena) |
+| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | 468 KB *(30%)* | **119.38 KB *(46%)*** | 271.79 ms | 392.85 ms | **664.64 ms** | Frequency-Folded 1D Dilated TC-ResNet (93.7k INT8) |
+| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **398 KB *(25%)*** | **119.38 KB *(46%)*** | **216.77 ms** | **197.48 ms** | **`414.24 ms`** | Register-Tile Caching + Structured Channel Pruning (<50 KB Flash) |
+| **7** | **`ESP32-S3 PIE SIMD (Dual-Core)`**<br>*(ESP32-S3 - LX7 @ 240 MHz)* | **89.00%** | **128.00 KB** | 850 KB *(11%)* | **80.00 KB *(16%)*** | **48.00 ms** | **64.00 ms** | **`112.00 ms`** | ESP-NN + 128-bit Vector PIE SIMD Pipeline |
 
 ---
 
