@@ -39,6 +39,16 @@ All metrics measured live on physical silicon with real audio streams:
 
 ---
 
+## 📈 Confusion Matrix & Validation Results
+
+Below is the 50x50 multi-class confusion matrix for the **90.50% High-Accuracy Model** evaluated on the 400 held-out test clips (8 clips per class across all 50 categories):
+
+<p align="center">
+  <img src="assets/confusion_matrix_91_5.png" alt="ESC-50 Confusion Matrix (90.50% Accuracy)" width="720">
+</p>
+
+---
+
 ## 🧠 Architectural Highlights
 
 ```text
@@ -102,6 +112,9 @@ The on-chip CMSIS-DSP preprocessing pipeline (Radix-4 RFFT, 52 Mel filterbanks, 
 ## 📁 Repository Directory Structure
 
 ```text
+├── assets/
+│   └── confusion_matrix_91_5.png           # 50x50 Multi-Class Confusion Matrix
+│
 ├── models/
 │   ├── best_tcn_slim_qat.pth               # 80.50% Slim TCN Checkpoint (47.57 KB Flash)
 │   ├── best_tcn_base_qat.pth               # 85.25% Standard TCN Checkpoint (92.86 KB Flash)
