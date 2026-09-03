@@ -1,5 +1,6 @@
 #include "audio_preprocessing.h"
 #include "mel_filterbank_tables.h"
+#include "config.h"
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
@@ -53,8 +54,13 @@ static void compute_frame_power_spectrum_onthefly(
         }
 
         float raw_curr = (float)(raw_pcm[audio_idx] - dc_offset) / 32768.0f;
-        /* Bit-Exact Standard Torchaudio Windowing (No pre-emphasis distortion) */
         float sample_val = raw_curr;
+#if (ACTIVE_MODEL_PROFILE == PROFILE_FLAGSHIP_DENSE_91 || ACTIVE_MODEL_PROFILE == PROFILE_INT8_FIXED_SIMD_91 || ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+        int prev_idx = audio_idx - 1;
+        if (prev_idx < 0) prev_idx = 0;
+        float prev_sample = (float)(raw_pcm[prev_idx] - dc_offset) / 32768.0f;
+        sample_val = raw_curr - 0.95f * prev_sample;
+#endif
         fft_buf[n] = sample_val * HANN_WINDOW_512[n];
     }
 
@@ -293,7 +299,12 @@ void audio_preprocess_tile_chunk_direct(
             float sample_val = 0.0f;
             int sample_idx = sample_offset + n;
             if (sample_idx >= 0 && sample_idx < num_samples) {
-                sample_val = (float)(new_pcm_chunk[sample_idx] - dc_offset) / 32768.0f;
+                float raw_curr = (float)(new_pcm_chunk[sample_idx] - dc_offset) / 32768.0f;
+                sample_val = raw_curr;
+#if (ACTIVE_MODEL_PROFILE == PROFILE_FLAGSHIP_DENSE_91 || ACTIVE_MODEL_PROFILE == PROFILE_INT8_FIXED_SIMD_91 || ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
+                float prev_sample = (sample_idx > 0) ? (float)(new_pcm_chunk[sample_idx - 1] - dc_offset) / 32768.0f : raw_curr;
+                sample_val = raw_curr - 0.95f * prev_sample;
+#endif
             }
             fft_buf[n] = sample_val * HANN_WINDOW_512[n];
         }

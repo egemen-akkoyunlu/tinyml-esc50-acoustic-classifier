@@ -378,6 +378,16 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
             }
             gate_h[i] = sum_h;
         }
+
+        /* Fast FPU Recurrent Cell Activation */
+        for (int j = 0; j < GRU_HIDDEN_DIM; j++) {
+            float r = fast_sigmoid_fpu(gate_x[j] + gate_h[j]);
+            float z = fast_sigmoid_fpu(gate_x[GRU_HIDDEN_DIM + j] + gate_h[GRU_HIDDEN_DIM + j]);
+            float n = fast_tanh_fpu(gate_x[2 * GRU_HIDDEN_DIM + j] + r * gate_h[2 * GRU_HIDDEN_DIM + j]);
+
+            h[j] = (1.0f - z) * n + z * h[j];
+            H[t][j] = h[j];
+        }
 #elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
         /* ⚡ Branchless CSR Sparse Zero-Skipping */
         sparse_matvec_mult(GRU_W_IH_SPARSE, GRU_W_IH_COL_IDX, GRU_W_IH_ROW_OFFSETS, GRU_B_IH, feat_ptr, gate_x, 3 * GRU_HIDDEN_DIM);
