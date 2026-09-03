@@ -26,16 +26,16 @@ This repository contains the training pipeline, quantization workflows, and embe
 
 All metrics measured live on physical silicon with real audio streams:
 
-| # | Profile & Target Architecture | Accuracy | Model Flash | Total SRAM | Audio DSP | Stage 1 (2D CNN) | Stage 2 (Seq Head) | Total Latency | Key Optimization |
+| # | Profile & Target Architecture | Accuracy | Firmware Flash | Total SRAM | Audio DSP | Stage 1 (2D CNN) | Stage 2 (Seq Head) | Total Latency | Key Optimization |
 | :-: | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :--- |
-| **1** | **`PROFILE_HIGH_ACCURACY_DENSE_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | 212.0 KB *(83%)* | **59.57 ms** | 273.50 ms | 426.21 ms | **759.28 ms** | TFLM Interpreter (172 KB Arena) + FP32 Dense GRU |
-| **2** | **`PROFILE_SPARSE_PRUNED_48K`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **88.50%** | 620.0 KB | 212.0 KB *(83%)* | **54.99 ms** | 273.56 ms | 340.03 ms | **668.58 ms** | TFLM + CSR Zero-Skipping FPU GRU |
-| **3** | **`PROFILE_INT8_FIXED_SIMD_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.00%** | 720.0 KB | 212.0 KB *(83%)* | **59.57 ms** | 273.53 ms | 194.49 ms | **527.59 ms** | TFLM + Fixed-Point INT8/INT16 SIMD GRU (`__SMLAD`) |
-| **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | 866.0 KB | **`98.5 KB *(38%)*`** | **59.39 ms** | 289.03 ms | 196.41 ms | **544.83 ms** | Native CMSIS-NN Ping-Pong Buffer (Zero TFLM Arena) |
-| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | 92.86 KB | **`96.3 KB *(38%)*`** | **54.90 ms** | 272.03 ms | 392.82 ms | **719.75 ms** | 1D Dilated TC-ResNet (93.7k INT8) |
-| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`47.57 KB`** | **`96.3 KB *(38%)*`** | **55.12 ms** | **217.10 ms** | **197.51 ms** | **`469.73 ms`** | 1D Dilated TC-ResNet + Channel Pruning (<50 KB Flash) |
-| **7** | **`PROFILE_ESP32S3_HIGH_ACC_89`**<br>*(ESP32-S3 - LX7 @ 160 MHz)* | **89.00%** | **146.80 KB** | 378.00 KB *(95%)* | **4.38 ms** | — | — | **`454.88 ms`** | ESP-DL Monolithic INT8 + 128-bit Vector PIE SIMD |
-| **8** | **`PROFILE_ESP32S3_SLIM_TCN_79`**<br>*(ESP32-S3 - LX7 @ 160 MHz)* | **78.75%** | **`82.78 KB`** | **182.28 KB *(46%)*** | **4.38 ms** | — | — | **`148.60 ms`** | ESP-DL 128-bit PIE SIMD INT8 + DRAM Optimization |
+| **1** | **`PROFILE_HIGH_ACCURACY_DENSE_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | **54.96%** *(844 KB)* | **86.77%** *(222 KB)* | **59.57 ms** | 273.50 ms | 426.21 ms | **759.28 ms** | TFLM Interpreter (172 KB Arena) + FP32 Dense GRU |
+| **2** | **`PROFILE_SPARSE_PRUNED_48K`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **88.50%** | **39.86%** *(612 KB)* | **86.77%** *(222 KB)* | **54.99 ms** | 273.56 ms | 340.03 ms | **668.58 ms** | TFLM + CSR Zero-Skipping FPU GRU |
+| **3** | **`PROFILE_INT8_FIXED_SIMD_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.00%** | **37.23%** *(572 KB)* | **86.77%** *(222 KB)* | **59.57 ms** | 273.53 ms | **194.49 ms** | **527.59 ms** | TFLM + Fixed-Point INT8/INT16 SIMD GRU (`__SMLAD`) |
+| **4** | **`PROFILE_CMSIS_NN_PINGPONG_91`**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **91.50%** | **24.83%** *(381 KB)* | **`58.22% *(149 KB)*`** | **59.39 ms** | 289.03 ms | 196.41 ms | **544.83 ms** | Native CMSIS-NN Ping-Pong Buffer (73 KB SRAM Reclaimed) |
+| **5** | **`PROFILE_TCN_85` (Standard)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **85.25%** | **19.67%** *(302 KB)* | **`56.58% *(145 KB)*`** | **54.90 ms** | 272.03 ms | 392.82 ms | **719.75 ms** | 1D Dilated TC-ResNet (93.7k INT8) |
+| **6** | **`PROFILE_SLIM_TCN_81` (Slim Pruned)**<br>*(EFR32MG24 - M33 @ 78 MHz)* | **80.50%** | **`15.81% *(243 KB)*`** | **`56.58% *(145 KB)*`** | **55.12 ms** | **217.10 ms** | **197.51 ms** | **`469.73 ms`** | 1D Dilated TC-ResNet + Channel Pruning (<16% Flash) |
+| **7** | **`PROFILE_ESP32S3_HIGH_ACC_89`**<br>*(ESP32-S3 - LX7 @ 160 MHz)* | **89.00%** | **146.80 KB** *(13%)* | 378.00 KB *(95%)* | **4.38 ms** | — | — | **`454.88 ms`** | ESP-DL Monolithic INT8 + 128-bit Vector PIE SIMD |
+| **8** | **`PROFILE_ESP32S3_SLIM_TCN_79`**<br>*(ESP32-S3 - LX7 @ 160 MHz)* | **78.75%** | **`82.78 KB *(12%)*`** | **182.28 KB *(46%)*** | **4.38 ms** | — | — | **`148.60 ms`** | ESP-DL 128-bit PIE SIMD INT8 + DRAM Optimization |
 
 ---
 
