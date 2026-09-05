@@ -166,7 +166,7 @@ int cmsis_nn_cnn_run(const int8_t *input_spec_int8, int8_t *ping_pong_A, int8_t 
     bias_dims = {1, 1, 1, 32};
 
     conv_params.input_offset = 128;
-    conv_params.output_offset = 5; // output zp = 5, offset = 5
+    conv_params.output_offset = CMSIS_CNN_OUTPUT_ZERO_POINT; // output zp = -17
     conv_params.stride.h = 1;
     conv_params.stride.w = 1;
     conv_params.padding.h = 0;

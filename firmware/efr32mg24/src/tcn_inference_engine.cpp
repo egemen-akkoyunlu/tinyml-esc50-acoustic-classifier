@@ -201,6 +201,11 @@ int tcn_inference_init(void) {
     return 0;
 }
 
+void tcn_inference_get_quant_params(float *out_scale, int32_t *out_zero_point) {
+    if (out_scale) *out_scale = IN_QUANT_SCALE;
+    if (out_zero_point) *out_zero_point = IN_QUANT_ZP;
+}
+
 // ⚡ Fast Cache-Aligned 1D Dilated Depthwise Conv + Pointwise Residual Block
 static void run_dilated_residual_block_fast(
     const float *input, float *output, float *scratch_dw,
@@ -676,7 +681,7 @@ int tcn_inference_run(const int8_t *spectrogram_int8, int8_t *ping_pong_A, int8_
     float tcn_time_ms = (float)tcn_time_us / 1000.0f;
 
     printf("\n  🔍 ON-CHIP FORENSICS (1D Dilated TC-ResNet):\n");
-    printf("    • Model Profile : %s\n", (ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81) ? "Slim 48k Channel-Pruned (80.5% INT8)" : "Standard 93k (85.25% INT8)");
+    printf("    • Model Profile : %s\n", (ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81) ? "Slim 48k Channel-Pruned (69.5% INT8 Fold-5)" : "Standard 93k (67.75% INT8 Fold-5)");
     printf("    • Working Arena : 96.3 KB RAM (Shared Ping-Pong)\n");
     printf("    • Layer 1 Stem  : INT8 range [%d .. %d]\n", l1_min, l1_max);
     printf("    • Layer 5 PhiOut: INT8 range [%d .. %d]\n", l5_min, l5_max);

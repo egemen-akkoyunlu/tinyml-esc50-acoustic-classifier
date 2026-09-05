@@ -75,7 +75,7 @@ int main(void) {
     printk("\n============================================================\n");
     printk(" 🧪 FIRMWARE MODE 2: DIRECT AUDIO INJECTION BENCHMARK\n");
     printk(" Target: Silicon Labs EFR32MG24 DevKit (ARM Cortex-M33)\n");
-    printk(" Input : Golden Validation 'keyboard_typing' ESC-50 Array (1-94231-B-32.wav)\n");
+    printk(" Input : Golden Validation 'keyboard_typing' ESC-50 Array (5-216131-A-32.wav)\n");
     printk(" Bypassing Physical Microphone to Test DSP & Neural Network!\n");
     printk("============================================================\n\n");
 
@@ -90,7 +90,7 @@ int main(void) {
         const char *class_name = inference_get_class_name(predicted_class_id);
         printk("\n============================================================\n");
         printk(" 🏆 GOLDEN AUDIO INJECTION INFERENCE RESULT:\n");
-        printk("   • Injected Sound       : 'keyboard_typing' (1-94231-B-32.wav - 100% UNSEEN VAL)\n");
+        printk("   • Injected Sound       : 'keyboard_typing' (5-216131-A-32.wav - Official Unseen Fold-5)\n");
         printk("   • Predicted Class ID   : %d\n", predicted_class_id);
         printk("   • Predicted Sound Name : '%s'\n", class_name);
         printk("   • Prediction Confidence: %d%%\n", (int)(confidence * 100.0f));
@@ -146,8 +146,8 @@ int main(void) {
         memset(input_tensor_ptr, 0, sizeof(float) * SPECTROGRAM_TOTAL_ELEMENTS);
     }
 
-    const int SILENCE_AC_RMS_THRESHOLD = 3500;      /* Squelch threshold: Ignores ambient noise (<3500), triggers on active sounds */
-    const float SOUND_CONFIDENCE_THRESHOLD = 0.35f; /* 35% minimum confidence */
+    /* Squelch threshold defined in config.h (SILENCE_AC_RMS_THRESHOLD) */
+    const float SOUND_CONFIDENCE_THRESHOLD = 0.20f; /* 20% minimum confidence (10x random chance in 50 classes) */
     int inference_counter = 0;
 
     while (1) {

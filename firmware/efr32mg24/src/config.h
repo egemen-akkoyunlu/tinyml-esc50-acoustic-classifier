@@ -28,7 +28,8 @@ extern "C" {
 #define MODE_AUDIO_DUMP_TO_PC      1
 #define MODE_INJECT_GOLDEN_SAMPLE  2
 
-#define FIRMWARE_OPERATION_MODE    MODE_REALTIME_INFERENCE /* Default Mode: Benchmark Golden Pre-Recorded Audio (No Mic) */
+#define FIRMWARE_OPERATION_MODE    MODE_REALTIME_INFERENCE /* Live Microphone Real-Time Sound Inference */
+#define SILENCE_AC_RMS_THRESHOLD   3500                    /* Increased squelch threshold: Ignores fan/ambient noise (<3500) */
 
 /* ============================================================================
  * 🎛️ TINYML MODEL PROFILE CONFIGURATION (Select your Hardware Tier)
@@ -46,7 +47,7 @@ extern "C" {
 #define PROFILE_TCN_85               5
 #define PROFILE_SLIM_TCN_81          6
 
-#define ACTIVE_MODEL_PROFILE         PROFILE_SLIM_TCN_81 /* Default Model Profile: Slim Channel-Pruned TCN (~47.6 KB Flash, 7.5 KB SRAM) [<50 KB] */
+#define ACTIVE_MODEL_PROFILE         PROFILE_SLIM_TCN_81
 
 #define ENABLE_STREAMING_INFERENCE         true
 #define ENABLE_BLE_COMMUNICATION           false /* Set to false for standalone microphone audio inference over UART */

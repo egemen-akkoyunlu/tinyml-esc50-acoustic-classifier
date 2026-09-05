@@ -32,6 +32,11 @@ int tcn_inference_init(void);
  */
 int tcn_inference_run(const int8_t *spectrogram_int8, int8_t *ping_pong_A, int8_t *ping_pong_B, int *out_class_id, float *out_confidence);
 
+/**
+ * @brief Retrieves input quantization parameters (scale and zero-point) for current active TCN profile.
+ */
+void tcn_inference_get_quant_params(float *out_scale, int32_t *out_zero_point);
+
 #ifdef __cplusplus
 }
 #endif

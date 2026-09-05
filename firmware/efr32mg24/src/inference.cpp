@@ -7,7 +7,7 @@
     #include "phinet_features_model_data.h"
     #include "gru_classifier_weights.h"
 #elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
-    #include "phinet_features_pruned_model_data.h"
+    #include "phinet_features_model_data.h"
     #include "gru_classifier_weights_pruned_csr.h"
 #elif (ACTIVE_MODEL_PROFILE == PROFILE_INT8_FIXED_SIMD_91)
     #include "phinet_features_pruned_model_data.h"
@@ -37,26 +37,40 @@
  * Stage 1 CNN Ping-Pong Buffers (96.3 KB) & Stage 2 GRU Working Buffers
  * Ping-Pong B (32.1 KB) hosts Input Spectrogram & Stage 1 Features Output.
  * Ping-Pong A (64.2 KB) hosts Intermediate Layers & Stage 2 Recurrent State.
- * ZERO memory overwrite collision during inference!
  * ============================================================================ */
+#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
 union alignas(16) InferenceMemoryPool {
-#if (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91 || ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
     struct {
         int8_t ping_pong_A[65728]; // 64.2 KB (Layer 1 Stem Conv2D [26x157x16] = 65,312 Bytes)
         int8_t ping_pong_B[32864]; // 32.1 KB (Input Spectrogram [52x313] & Layer 2 Output)
     } cmsis_nn;
-#else
-    uint8_t tensor_arena[TFLM_TENSOR_ARENA_SIZE];
-#endif
-#if (ACTIVE_MODEL_PROFILE != PROFILE_TCN_85 && ACTIVE_MODEL_PROFILE != PROFILE_SLIM_TCN_81)
     struct {
         alignas(16) float s_features[GRU_TIME_STEPS][GRU_INPUT_DIM]; // 5.0 KB (in ping_pong_A)
         alignas(16) float s_H[GRU_TIME_STEPS][GRU_HIDDEN_DIM];       // 24.9 KB (in ping_pong_A)
         alignas(16) float s_gate_x[3 * GRU_HIDDEN_DIM];              // 1.9 KB (in ping_pong_A)
         alignas(16) float s_gate_h[3 * GRU_HIDDEN_DIM];              // 1.9 KB (in ping_pong_A)
     } stage2;
-#endif
 };
+#elif (ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
+union alignas(16) InferenceMemoryPool {
+    struct {
+        int8_t ping_pong_A[65728];
+        int8_t ping_pong_B[32864];
+    } cmsis_nn;
+};
+#else
+/* TFLM Profiles (Baseline FP32, Sparse CSR, INT8 Fixed SIMD):
+ * Separate tensor_arena and stage2 to guarantee zero memory overwrite collision! */
+struct alignas(16) InferenceMemoryPool {
+    uint8_t tensor_arena[TFLM_TENSOR_ARENA_SIZE];
+    struct {
+        alignas(16) float s_features[GRU_TIME_STEPS][GRU_INPUT_DIM]; // 5.0 KB
+        alignas(16) float s_H[GRU_TIME_STEPS][GRU_HIDDEN_DIM];       // 24.9 KB
+        alignas(16) float s_gate_x[3 * GRU_HIDDEN_DIM];              // 1.9 KB
+        alignas(16) float s_gate_h[3 * GRU_HIDDEN_DIM];              // 1.9 KB
+    } stage2;
+};
+#endif
 
 static InferenceMemoryPool s_mem_pool;
 #if (ACTIVE_MODEL_PROFILE != PROFILE_CMSIS_NN_PINGPONG_91 && ACTIVE_MODEL_PROFILE != PROFILE_TCN_85 && ACTIVE_MODEL_PROFILE != PROFILE_SLIM_TCN_81)
@@ -200,8 +214,7 @@ extern "C" bool inference_is_input_int8(void) {
 
 extern "C" void inference_get_input_quant_params(float *out_scale, int32_t *out_zero_point) {
 #if (ACTIVE_MODEL_PROFILE == PROFILE_TCN_85 || ACTIVE_MODEL_PROFILE == PROFILE_SLIM_TCN_81)
-    if (out_scale) *out_scale = 0.09229838f;
-    if (out_zero_point) *out_zero_point = 22;
+    tcn_inference_get_quant_params(out_scale, out_zero_point);
 #elif (ACTIVE_MODEL_PROFILE == PROFILE_CMSIS_NN_PINGPONG_91)
     if (out_scale) *out_scale = 0.09312528f;
     if (out_zero_point) *out_zero_point = 20;
@@ -257,8 +270,8 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     }
 
     const int8_t *out_int8 = s_stage1_features_ptr;
-    const float out_scale = 0.15506062f;
-    const int32_t out_zp = 5;
+    const float out_scale = CMSIS_CNN_OUTPUT_SCALE;
+    const int32_t out_zp = CMSIS_CNN_OUTPUT_ZERO_POINT;
     int num_freq = 13;
     int num_time = 40;
     int num_chan = 32;
@@ -377,16 +390,6 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
                        + w_hh_ptr[j + 7] * h[j + 7];
             }
             gate_h[i] = sum_h;
-        }
-
-        /* Fast FPU Recurrent Cell Activation */
-        for (int j = 0; j < GRU_HIDDEN_DIM; j++) {
-            float r = fast_sigmoid_fpu(gate_x[j] + gate_h[j]);
-            float z = fast_sigmoid_fpu(gate_x[GRU_HIDDEN_DIM + j] + gate_h[GRU_HIDDEN_DIM + j]);
-            float n = fast_tanh_fpu(gate_x[2 * GRU_HIDDEN_DIM + j] + r * gate_h[2 * GRU_HIDDEN_DIM + j]);
-
-            h[j] = (1.0f - z) * n + z * h[j];
-            H[t][j] = h[j];
         }
 #elif (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
         /* ⚡ Branchless CSR Sparse Zero-Skipping */
@@ -575,12 +578,7 @@ extern "C" int inference_run_direct(int *out_class_id, float *out_confidence) {
     sparse_matvec_mult(FC_W_SPARSE, FC_W_COL_IDX, FC_W_ROW_OFFSETS, FC_B, btn_out, raw_logits, NUM_ESC50_CLASSES);
 #endif
 
-#if (ACTIVE_MODEL_PROFILE == PROFILE_SPARSE_PRUNED_48K)
-    /* ⚡ ICML 2017 Temperature Calibration Scale for 68% Pruning Variance Recovery */
-    const float LOGIT_CALIBRATION_SCALE = 3.0f;
-#else
     const float LOGIT_CALIBRATION_SCALE = 1.0f;
-#endif
 
     /* Temporal EMA Smoothing across successive frames (Alpha = 0.65) */
     static float s_smoothed_logits[NUM_ESC50_CLASSES];

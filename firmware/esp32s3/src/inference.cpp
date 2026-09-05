@@ -97,19 +97,27 @@ bool KWSInference::init()
             (void *)model_espdl_bin, sizeof(model_espdl_bin));
     
     /*
-     * Initialize the Flatbuffer Model object.
-     * 
-     * IMPORTANT OPTIMIZATION: 
-     * We pass "false" as the 6th argument (param_copy) to run model weights
-     * directly from Flash RODATA. This saves ~80 KB of internal SRAM,
-     * preventing allocation failures on the system heap.
+     * Model Profile Selection:
+     * - Profile 7 (Dense GRU): Requires param_copy=true for recurrent tensor allocation.
+     * - Profile 8 (Slim TCN): Uses param_copy=false to execute directly from Flash RODATA.
      */
+    #define ESP_PROFILE_SLIM_TCN  0
+    #define ESP_PROFILE_DENSE_GRU 1
+
+    #define ACTIVE_ESP_PROFILE    ESP_PROFILE_SLIM_TCN
+
+    #if (ACTIVE_ESP_PROFILE == ESP_PROFILE_DENSE_GRU)
+        constexpr bool kParamCopy = true;
+    #else
+        constexpr bool kParamCopy = false;
+    #endif
+
     model = new dl::Model((const char *)model_espdl_bin, 
                           fbs::MODEL_LOCATION_IN_FLASH_RODATA,
                           0,
                           dl::MEMORY_MANAGER_GREEDY,
                           nullptr,
-                          false);
+                          kParamCopy);
 
     if (model == nullptr) {
         LOG_ERR("[FLAG: ERROR] Failed to initialize dl::Model!");

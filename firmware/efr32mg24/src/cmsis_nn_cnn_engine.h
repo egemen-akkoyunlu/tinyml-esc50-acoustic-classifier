@@ -16,6 +16,10 @@ void cmsis_nn_cnn_init(void);
 // Output: [13, 40, 32] INT8 Feature Map (scale=0.155061, zp=5)
 int cmsis_nn_cnn_run(const int8_t *input_spec_int8, int8_t *ping_pong_A, int8_t *ping_pong_B, int8_t *out_features_int8);
 
+// Output Feature Map Quantization Parameters
+#define CMSIS_CNN_OUTPUT_SCALE      0.035800964f
+#define CMSIS_CNN_OUTPUT_ZERO_POINT -17
+
 #ifdef __cplusplus
 }
 #endif

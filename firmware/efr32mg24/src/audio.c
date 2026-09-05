@@ -56,19 +56,19 @@ static void check_usart_errors(const char* stage) {
 }
 
 void audio_init(void) {
-    printf("-> Initializing hardware-level I2S and power...\n");
+    printf("-> Donanim seviyesinde I2S ve Guc baslatiliyor...\n");
 
-    /* 1. Enable CMU Clocks */
+    /* 1. Saatleri Ac */
     CMU_ClockEnable(cmuClock_USART0, true);
     CMU_ClockEnable(cmuClock_GPIO, true); 
 
-    /* 2. Microphone Power Supply (PC08 and PC09) */
+    /* 2. MIKROFON GUCU (PC08 ve PC09) */
     GPIO_PinModeSet(gpioPortC, 8, gpioModePushPull, 1);
     GPIO_PinModeSet(gpioPortC, 9, gpioModePushPull, 1);
 
     k_sleep(K_MSEC(50)); 
 
-    /* 3. Configure Physical GPIO Pins */
+    /* FIZIKSEL PINLERI DIS DUNYAYA AC */
     GPIO_PinModeSet(gpioPortD, 3, gpioModePushPull, 0); /* CLK */
     GPIO_PinModeSet(gpioPortD, 5, gpioModePushPull, 0); /* WS */
     GPIO_PinModeSet(gpioPortD, 4, gpioModeInput, 0);    /* RX */
@@ -77,12 +77,12 @@ void audio_init(void) {
     GPIO->USARTROUTE[0].RXROUTE  = (gpioPortD << _GPIO_USART_RXROUTE_PORT_SHIFT)  | (4 << _GPIO_USART_RXROUTE_PIN_SHIFT);
     GPIO->USARTROUTE[0].CSROUTE  = (gpioPortD << _GPIO_USART_CSROUTE_PORT_SHIFT)  | (5 << _GPIO_USART_CSROUTE_PIN_SHIFT);
 
-    /* 4. USART Route Matrix */
+    /* DONANIM MATRISI (ROUTE) */
     GPIO->USARTROUTE[0].ROUTEEN = GPIO_USART_ROUTEEN_CLKPEN | 
                                   GPIO_USART_ROUTEEN_RXPEN  | 
                                   GPIO_USART_ROUTEEN_CSPEN;
 
-    /* 5. I2S Configuration: W32D16 Stereo */
+    /* I2S YAPILANDIRMASI: W32D16 Stereo */
     USART_InitI2s_TypeDef init = USART_INITI2S_DEFAULT;
     init.sync.baudrate = 1024000;
     init.sync.enable = usartEnable; 
@@ -93,19 +93,19 @@ void audio_init(void) {
     init.sync.autoCsEnable = true;
     USART_InitI2s(USART0, &init);
 
-    /* Force 16-bit databits */
+    /* Databits 16 zorla */
     USART0->FRAME = (USART0->FRAME & ~_USART_FRAME_DATABITS_MASK) | USART_FRAME_DATABITS_SIXTEEN;
 
     USART_Tx(USART0, 0x00000000);
 
-    /* Enable Clock Auto-TX */
+    /* SAATI ATES (AUTOTX) */
     USART0->CTRL |= USART_CTRL_AUTOTX;
     USART_Enable(USART0, usartEnable); 
     USART0->TXDATA = 0x0000; 
 
-    printf("-> [OK] I2S Initialized: W32D16 Stereo mode active.\n");
+    printf("-> [OK] I2S Hazir! W32D16 Stereo modu aktif.\n");
     
-    /* 6. Initialize LDMA Controller */
+    /* LDMA HAZIRLIGI */
     CMU_ClockEnable(cmuClock_LDMA, true);
     LDMA_Init_t ldma_init = LDMA_INIT_DEFAULT;
     LDMA_Init(&ldma_init);
@@ -131,7 +131,7 @@ static int internal_record_to_buffer(int16_t *buffer, int num_samples) {
     dma_desc.xfer.size = ldmaCtrlSizeHalf;     /* 16-BIT TRANSFER */
     dma_desc.xfer.dstInc = ldmaCtrlSrcIncOne;  
 
-    /* Synchronize to Left Channel (WS=0) start edge */
+    /* Tam Sol kanalin (WS=0) basladigi ANI yakala */
     while (GPIO_PinInGet(gpioPortD, 5) == 0);
     while (GPIO_PinInGet(gpioPortD, 5) == 1);
 
