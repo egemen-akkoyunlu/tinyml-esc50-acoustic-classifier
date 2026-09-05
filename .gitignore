@@ -59,6 +59,9 @@ train_*.py
 !training/prepare_official_fold5_dataset.py
 !training/cache_official_fold5_features.py
 !export/*fold5*.py
+!export/export_fp32_gru_header.py
+!export/export_clean_cnn_int8.py
+!export/export_cmsis_nn_cpp_graph.py
 !export/quantize_*_to_espdl.py
 
 # Build Directories (Zephyr RTOS, CMake, ESP-IDF)

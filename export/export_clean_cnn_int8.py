@@ -139,24 +139,35 @@ print("\n" + "=" * 80)
 print(f"📝 STEP 5: EXPORTING C HEADER: {HEADER_PATH}")
 print("=" * 80)
 
-os.makedirs(os.path.dirname(HEADER_PATH), exist_ok=True)
-with open(HEADER_PATH, "w") as f:
-    f.write("// ==============================================================================\n")
-    f.write("// FULL INT8 PHINET CNN BACKBONE MODEL DATA (CMSIS-NN READY)\n")
-    f.write("// Auto-generated from Clean Keras Backbone - 0 Pad Ops, 0 Pool Overlap\n")
-    f.write("// ==============================================================================\n\n")
-    f.write("#ifndef PHINET_FEATURES_MODEL_DATA_H_\n")
-    f.write(f"const unsigned int g_phinet_features_model_data_size = {len(tflite_int8_bytes)};\n")
-    f.write(f"const unsigned int g_phinet_features_model_data_len = {len(tflite_int8_bytes)};\n\n")
-    f.write("const unsigned char g_phinet_features_model_data[] __attribute__((aligned(4))) = {\n")
-    
-    for i in range(0, len(tflite_int8_bytes), 12):
-        chunk = tflite_int8_bytes[i:i+12]
-        hex_str = ", ".join([f"0x{b:02x}" for b in chunk])
-        f.write(f"  {hex_str},\n")
-        
-    f.write("};\n\n")
-    f.write("#endif  // PHINET_FEATURES_MODEL_DATA_H_\n")
+hex_lines = []
+for i in range(0, len(tflite_int8_bytes), 12):
+    chunk = tflite_int8_bytes[i:i+12]
+    hex_str = ", ".join([f"0x{b:02x}" for b in chunk])
+    hex_lines.append(f"  {hex_str},")
+hex_body = "\n".join(hex_lines)
 
-print(f"✅ Successfully wrote C header: {HEADER_PATH} ({len(tflite_int8_bytes)} bytes)")
+header_content = f"""// ==============================================================================
+// FULL INT8 PHINET CNN BACKBONE MODEL DATA (CMSIS-NN READY)
+// Auto-generated from Clean Keras Backbone - 0 Pad Ops, 0 Pool Overlap
+// ==============================================================================
+
+#ifndef PHINET_FEATURES_MODEL_DATA_H_
+const unsigned int g_phinet_features_model_data_size = {len(tflite_int8_bytes)};
+const unsigned int g_phinet_features_model_data_len = {len(tflite_int8_bytes)};
+
+const unsigned char g_phinet_features_model_data[] __attribute__((aligned(4))) = {{
+{hex_body}
+}};
+
+#endif  // PHINET_FEATURES_MODEL_DATA_H_
+"""
+targets = [
+    HEADER_PATH,
+    "/home/acar/zephyrproject/my_apps/silabs_ble_audio_peripheral/src/phinet_features_model_data.h"
+]
+for t in targets:
+    os.makedirs(os.path.dirname(t), exist_ok=True)
+    with open(t, "w") as f:
+        f.write(header_content)
+    print(f"✅ Successfully wrote C header: {t} ({len(tflite_int8_bytes)} bytes)")
 print("=" * 80)

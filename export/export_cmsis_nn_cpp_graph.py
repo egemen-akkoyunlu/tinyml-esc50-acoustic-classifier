@@ -133,6 +133,12 @@ with open(HEADER_OUT, "w") as f:
     f.write(to_c_array(cmp_m, "CMSIS_CMP_M", "int32_t"))
     f.write(to_c_array(cmp_s, "CMSIS_CMP_S", "int32_t"))
 
+    f.write(f"#define CMSIS_CNN_OUTPUT_SCALE {cmp_out_d['quantization_parameters']['scales'][0]:.8f}f\n")
+    f.write(f"#define CMSIS_CNN_OUTPUT_ZERO_POINT {cmp_out_d['quantization_parameters']['zero_points'][0]}\n\n")
     f.write("#endif // CMSIS_NN_CNN_WEIGHTS_H\n")
 
-print(f"💾 Successfully regenerated 100% INT8 weights: {HEADER_OUT}")
+print(f"💾 Successfully regenerated 100% INT8 CMSIS-NN weights: {HEADER_OUT}")
+zephyr_out = "/home/acar/zephyrproject/my_apps/silabs_ble_audio_peripheral/src/cmsis_nn_cnn_weights.h"
+import shutil
+shutil.copy(HEADER_OUT, zephyr_out)
+print(f"💾 Successfully deployed to Zephyr app: {zephyr_out}")

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 # ==============================================================================
 # ⚡ ESP-PPQ INT8 QUANTIZATION & BIT-EXACT BENCHMARK FOR SEEED ESP32-S3 SENSE
-# 124.9k Parameter PhiNet-CRNN Distilled Champion Model
+# 124.9k Parameter PhiNet-CRNN QAT Model (Clean Fold-5 Zero-Leakage)
+# Protocol: KAROL PICZAK OFFICIAL 5-FOLD CV (FOLD 5 HELD-OUT)
 # Target: 100% Full-Integer INT8 Monolithic Execution (ESP-DL)
 # Environment: PyTorch (kws_env)
 # ==============================================================================
@@ -33,60 +34,26 @@ except ImportError:
 
 
 # ------------------------------------------------------------------------------
-# 1. BIT-EXACT DATASET LOADER (MATCHING COLAB DISTILLATION SPLIT)
+# 1. TENSOR DATASET FROM PRECOMPUTED OFFICIAL FOLD-5 NPY FILES
 # ------------------------------------------------------------------------------
-class ESC50(Dataset):
-    def __init__(self, root, sample_rate: int = 16000):
+class ESC50TensorDataset(Dataset):
+    """Loads precomputed spectrograms + labels from .npy files (zero test leakage)."""
+    def __init__(self, specs_path: str, labels_path: str):
         super().__init__()
-        self.root = os.path.expanduser(root)
-        self.sample_rate = sample_rate
-        
-        meta_csv = os.path.join(self.root, "meta", "esc50.csv")
-        if not os.path.exists(meta_csv):
-            meta_csv = os.path.join(self.root, "ESC-50-master", "meta", "esc50.csv")
-            self.root = os.path.join(self.root, "ESC-50-master")
-
-        with open(meta_csv, "r") as f:
-            reader = csv.DictReader(f)
-            self.rows = list(reader)
-
-        for r in self.rows:
-            r['category'] = r['category'].replace('_', ' ')
-
-        self.classes = sorted(list(set(r['category'] for r in self.rows)))
-        self.class_to_idx = {cat: i for i, cat in enumerate(self.classes)}
-        self.audio_paths = [os.path.join(self.root, 'audio', r['filename']) for r in self.rows]
-        self.targets = [self.class_to_idx[r['category']] for r in self.rows]
-
-        self.melspec = MelSpectrogram(
-            sample_rate=self.sample_rate,
-            n_fft=512,
-            win_length=512,
-            hop_length=256,
-            n_mels=52,
-            center=True,
-            power=2.0
-        )
-
-        print(f"📊 Pre-caching {len(self.audio_paths)} spectrograms...")
-        self.cached_spectrograms = []
-        for path in self.audio_paths:
-            tmp, sr = torchaudio.load(path)
-            if sr != self.sample_rate:
-                tmp = torchaudio.transforms.Resample(sr, self.sample_rate)(tmp)
-            if tmp.shape[1] < 80000:
-                tmp = F.pad(tmp, (0, 80000 - tmp.shape[1]))
-            else:
-                tmp = tmp[:, :80000]
-            tmp = tmp.sum(dim=0, keepdim=True)
-            log_mel = torch.log(self.melspec(tmp) + 1e-6)
-            self.cached_spectrograms.append(log_mel)
+        self.specs = np.load(specs_path)    # shape: (N, 52, 313) or (N, 1, 52, 313)
+        if self.specs.ndim == 3:
+            self.specs = np.expand_dims(self.specs, axis=1)
+        self.labels = np.load(labels_path)  # shape: (N,)
+        assert len(self.specs) == len(self.labels), \
+            f"Specs ({len(self.specs)}) and labels ({len(self.labels)}) count mismatch!"
 
     def __len__(self):
-        return len(self.audio_paths)
+        return len(self.labels)
 
     def __getitem__(self, idx):
-        return self.cached_spectrograms[idx], torch.tensor(self.targets[idx])
+        spec = torch.from_numpy(self.specs[idx]).float()
+        label = torch.tensor(int(self.labels[idx]), dtype=torch.long)
+        return spec, label
 
 
 # ------------------------------------------------------------------------------
@@ -228,7 +195,7 @@ class PureCleanModelForExport(nn.Module):
         w, b = extract_conv_bn(qat_model.stem[0])
         self.stem = nn.Sequential(
             nn.Conv2d(1, 16, kernel_size=3, stride=(2, 2), padding=1, bias=True),
-            nn.ReLU6()
+            nn.ReLU()
         )
         self.stem[0].weight.data.copy_(w)
         self.stem[0].bias.data.copy_(b)
@@ -238,14 +205,14 @@ class PureCleanModelForExport(nn.Module):
         w0_pw, b0_pw = extract_conv_bn(qat_model.phi_blocks[0].conv[3])
         self.b0_dw = nn.Sequential(
             nn.Conv2d(16, 16, kernel_size=3, stride=(1, 2), padding=1, groups=16, bias=True),
-            nn.ReLU6()
+            nn.ReLU()
         )
         self.b0_dw[0].weight.data.copy_(w0_dw)
         self.b0_dw[0].bias.data.copy_(b0_dw)
 
         self.b0_pw = nn.Sequential(
             nn.Conv2d(16, 32, kernel_size=1, stride=1, bias=True),
-            nn.ReLU6()
+            nn.ReLU()
         )
         self.b0_pw[0].weight.data.copy_(w0_pw)
         self.b0_pw[0].bias.data.copy_(b0_pw)
@@ -255,14 +222,14 @@ class PureCleanModelForExport(nn.Module):
         w1_pw, b1_pw = extract_conv_bn(qat_model.phi_blocks[2].conv[3])
         self.b1_dw = nn.Sequential(
             nn.Conv2d(32, 32, kernel_size=3, stride=(2, 2), padding=1, groups=32, bias=True),
-            nn.ReLU6()
+            nn.ReLU()
         )
         self.b1_dw[0].weight.data.copy_(w1_dw)
         self.b1_dw[0].bias.data.copy_(b1_dw)
 
         self.b1_pw = nn.Sequential(
             nn.Conv2d(32, 48, kernel_size=1, stride=1, bias=True),
-            nn.ReLU6()
+            nn.ReLU()
         )
         self.b1_pw[0].weight.data.copy_(w1_pw)
         self.b1_pw[0].bias.data.copy_(b1_pw)
@@ -310,7 +277,7 @@ class PureCleanModelForExport(nn.Module):
         attn_scores = rnn_out.mean(dim=-1)
         attn_weights = torch.softmax(attn_scores, dim=1)
         rnn_pooled = (rnn_out * attn_weights.unsqueeze(-1)).sum(dim=1)
-        rnn_compressed = F.relu6(self.bottleneck(rnn_pooled))
+        rnn_compressed = F.relu(self.bottleneck(rnn_pooled))
         return self.fc(rnn_compressed)
 
 
@@ -324,28 +291,29 @@ def main():
     project_root = os.path.abspath(os.path.join(curr_dir, "..")) if os.path.basename(curr_dir) in ["training", "export"] else curr_dir
 
     print("=" * 80)
-    print("⚡ ESP-PPQ & ESP-DL INT8 QUANTIZATION BENCHMARK (124.9k DISTILLED MODEL)")
+    print("⚡ ESP-PPQ & ESP-DL INT8 QUANTIZATION (124.9k PHINET-CRNN)")
+    print("🔒 PROTOCOL: KAROL PICZAK OFFICIAL 5-FOLD CV (FOLD 5 ZERO-LEAKAGE HELD-OUT)")
     print("=" * 80)
 
-    # 1. Dataset Split (Matching Colab 100%)
-    full_dataset = ESC50(root=project_root, sample_rate=16000)
-    
-    class_indices = defaultdict(list)
-    for idx, target in enumerate(full_dataset.targets):
-        class_indices[target].append(idx)
+    # 1. Load Precomputed Official Datasets
+    train_specs_path = os.path.join(project_root, "official_folds14_train_specs_1600.npy")
+    train_labels_path = os.path.join(project_root, "official_folds14_train_labels_1600.npy")
+    test_specs_path = os.path.join(project_root, "official_fold5_test_specs_400.npy")
+    test_labels_path = os.path.join(project_root, "official_fold5_test_labels_400.npy")
 
-    train_indices, val_indices = [], []
-    for cat, indices in class_indices.items():
-        rng = random.Random(42 + cat)
-        shuffled = list(indices)
-        rng.shuffle(shuffled)
-        split_pt = int(len(shuffled) * 0.8)
-        train_indices.extend(shuffled[:split_pt])
-        val_indices.extend(shuffled[split_pt:])
+    if not os.path.exists(test_specs_path) or not os.path.exists(test_labels_path):
+        raise FileNotFoundError(f"Missing official Fold-5 test set: {test_specs_path}")
 
-    val_dataset = Subset(full_dataset, val_indices)
-    val_loader = DataLoader(val_dataset, batch_size=1, shuffle=False)
-    print(f"📊 Validation Set: {len(val_dataset)} audio clips (32 train, 8 val per class)")
+    train_set = ESC50TensorDataset(train_specs_path, train_labels_path)
+    test_set = ESC50TensorDataset(test_specs_path, test_labels_path)
+
+    # Use first 128 samples of Folds 1-4 for calibration (0% test leakage!)
+    calib_indices = list(range(min(128, len(train_set))))
+    calibration_dataloader = DataLoader(Subset(train_set, calib_indices), batch_size=1, shuffle=False)
+    val_loader = DataLoader(test_set, batch_size=1, shuffle=False)
+
+    print(f"📦 Calibration Set (from Folds 1-4) : {len(calib_indices)} clips (Zero test overlap!)")
+    print(f"📦 Validation Set  (Fold 5 Held-out): {len(test_set)} clips (Karol Piczak Official)")
 
     # 2. Build QAT Model Structure Exactly as Saved
     model_qat = AudioPhiNetCRNNClassifierQAT(num_classes=50, sample_rate=16000).to(device)
@@ -364,11 +332,11 @@ def main():
     model_qat.train()
     model_prepared = torch_quant.prepare_qat(model_qat, inplace=False)
 
-    weights_path = os.path.join(project_root, "models", "best_distilled_qat_model.pth")
+    weights_path = os.path.join(project_root, "best_distilled_qat_model.pth")
     if not os.path.exists(weights_path):
-        weights_path = os.path.join(project_root, "best_distilled_qat_model.pth")
+        weights_path = os.path.join(project_root, "models", "best_distilled_qat_model.pth")
 
-    print(f"📂 Loading trained QAT checkpoint: {weights_path}")
+    print(f"\n📂 Loading Clean Fold-5 Distilled QAT Checkpoint: {weights_path}")
     state_dict = torch.load(weights_path, map_location=device)
     model_prepared.load_state_dict(state_dict)
     model_prepared.eval()
@@ -383,16 +351,21 @@ def main():
     print("📊 BENCHMARK 1: BEFORE QUANTIZATION (PYTORCH QAT EVALUATION)")
     print("=" * 80)
     qat_correct = 0
+    qat_top3 = 0
     qat_total = 0
     with torch.no_grad():
         for specs, labels in val_loader:
             specs, labels = specs.to(device), labels.to(device)
             outputs = model_prepared(specs)
-            qat_correct += (outputs.argmax(1) == labels).sum().item()
+            preds = outputs.argmax(1)
+            qat_correct += (preds == labels).sum().item()
+            _, top3 = outputs.topk(3, dim=1)
+            qat_top3 += (top3 == labels.view(-1, 1)).any(dim=1).sum().item()
             qat_total += labels.size(0)
 
     qat_acc = (qat_correct / qat_total) * 100.0
-    print(f"  • QAT Validation Accuracy (Before Quant): {qat_acc:.2f}% ({qat_correct}/{qat_total}) 🌟")
+    qat_top3_acc = (qat_top3 / qat_total) * 100.0
+    print(f"  • QAT Validation Accuracy (Before Quant): Top-1 = {qat_acc:.2f}% ({qat_correct}/{qat_total}) | Top-3 = {qat_top3_acc:.2f}% 🌟")
 
     # =========================================================================
     # 4. BUILD PURE CLEAN MODEL (0 FAKE QUANT NODES) & EXPORT ONNX
@@ -400,7 +373,7 @@ def main():
     print("\n" + "=" * 80)
     print("📦 EXPORTING CLEAN FP32 ONNX GRAPH (0 FAKE QUANT NODES)")
     print("=" * 80)
-    
+
     clean_model = PureCleanModelForExport(model_prepared).to(device)
     clean_model.eval()
 
@@ -419,6 +392,7 @@ def main():
         clean_model,
         dummy_input,
         onnx_fp32_path,
+        export_params=True,
         opset_version=13,
         input_names=["input"],
         output_names=["output"],
@@ -429,7 +403,7 @@ def main():
     m_onnx = onnx.load(onnx_fp32_path)
     m_sim, _ = simplify(m_onnx)
     onnx.save(m_sim, onnx_fp32_path)
-    print(f"✅ Exported Clean Simplified ONNX Graph (0 Shape ops) to: {onnx_fp32_path}")
+    print(f"✅ Exported Simplified ONNX Graph to: {onnx_fp32_path}")
 
     # =========================================================================
     # 5. RUN ESP-PPQ INT8 QUANTIZATION COMPILER
@@ -438,14 +412,13 @@ def main():
     print("⚙️ RUNNING ESP-PPQ POWER-OF-TWO INT8 COMPILER & CALIBRATION")
     print("=" * 80)
 
-    calibration_dataloader = DataLoader(val_dataset, batch_size=1, shuffle=False)
-
     quant_setting = QuantizationSettingFactory.espdl_setting()
+    quant_setting.fusion_setting.align_quantization = False
 
     quantized_ir = quantize_onnx_model(
         onnx_import_file=onnx_fp32_path,
         calib_dataloader=calibration_dataloader,
-        calib_steps=min(128, len(val_dataset)),
+        calib_steps=min(128, len(calib_indices)),
         input_shape=[1, 1, 52, 313],
         platform=TargetPlatform.ESPDL_S3_INT8,
         setting=quant_setting,
@@ -482,6 +455,7 @@ def main():
     executor = TorchExecutor(graph=quantized_ir, device=str(device))
     
     int8_correct = 0
+    int8_top3 = 0
     int8_total = 0
     all_preds = []
     all_targets = []
@@ -493,12 +467,17 @@ def main():
             pred = torch.from_numpy(pred).to(device)
         pred_cls = pred.argmax(1)
         int8_correct += (pred_cls == labels).sum().item()
+        
+        _, top3 = pred.topk(3, dim=1)
+        int8_top3 += (top3 == labels.view(-1, 1)).any(dim=1).sum().item()
+        
         int8_total += labels.size(0)
         all_preds.extend(pred_cls.cpu().numpy())
         all_targets.extend(labels.cpu().numpy())
 
     int8_acc = (int8_correct / int8_total) * 100.0
-    print(f"  • INT8 ESP-DL Validation Accuracy (After Quant): {int8_acc:.2f}% ({int8_correct}/{int8_total}) 🚀")
+    int8_top3_acc = (int8_top3 / int8_total) * 100.0
+    print(f"  • INT8 ESP-DL Validation Accuracy (After Quant): Top-1 = {int8_acc:.2f}% ({int8_correct}/{int8_total}) | Top-3 = {int8_top3_acc:.2f}% 🚀")
 
     # Generate Confusion Matrix
     try:
@@ -510,7 +489,7 @@ def main():
         plt.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
         plt.title(f'ESC-50 ESP32-S3 Post-Quantization INT8 Confusion Matrix ({int8_acc:.2f}% Accuracy)', fontsize=14, fontweight='bold', pad=15)
         plt.colorbar(fraction=0.046, pad=0.04)
-        classes = val_loader.dataset.dataset.classes
+        classes = [f"cls_{i}" for i in range(50)]
         tick_marks = np.arange(len(classes))
         plt.xticks(tick_marks, classes, rotation=90, fontsize=8)
         plt.yticks(tick_marks, classes, fontsize=8)
@@ -518,7 +497,7 @@ def main():
         plt.ylabel('True Label', fontsize=12, labelpad=10)
         plt.tight_layout()
 
-        cm_out_path = os.path.join(project_root, "models", "confusion_matrix_esp32_int8_89.png")
+        cm_out_path = os.path.join(project_root, "models", "confusion_matrix_esp32_int8_clean_fold5.png")
         os.makedirs(os.path.dirname(cm_out_path), exist_ok=True)
         plt.savefig(cm_out_path, dpi=300, bbox_inches='tight')
         print(f"  • Saved Post-Quantization Confusion Matrix to: {cm_out_path} 🖼️")
@@ -529,13 +508,14 @@ def main():
     # 7. FINAL QUANTIZATION SUMMARY REPORT
     # =========================================================================
     print("\n" + "=" * 80)
-    print("🏆 FINAL QUANTIZATION AUDIT REPORT (ESP32-S3 SENSE)")
+    print("🏆 FINAL QUANTIZATION AUDIT REPORT (ESP32-S3 SENSE - CLEAN FOLD-5)")
     print("=" * 80)
-    print(f"  • Pre-Quantization Accuracy (PyTorch QAT) : {qat_acc:.2f}%")
-    print(f"  • Post-Quantization Accuracy (INT8 ESP-DL): {int8_acc:.2f}%")
-    print(f"  • Quantization Delta                      : {int8_acc - qat_acc:+.2f}%")
+    print(f"  • Pre-Quantization Accuracy (PyTorch QAT) : Top-1 = {qat_acc:.2f}% | Top-3 = {qat_top3_acc:.2f}%")
+    print(f"  • Post-Quantization Accuracy (INT8 ESP-DL): Top-1 = {int8_acc:.2f}% | Top-3 = {int8_top3_acc:.2f}%")
+    print(f"  • Quantization Delta (Top-1)              : {int8_acc - qat_acc:+.2f}%")
     print(f"  • Total Model Parameters                  : {total_params:,} (~124.9k)")
-    print(f"  • Flash Binary Size                       : {os.path.getsize(espdl_bin_path):,} bytes (~146.9 KB)")
+    if os.path.exists(espdl_bin_path):
+        print(f"  • Flash Binary Size                       : {os.path.getsize(espdl_bin_path):,} bytes (~{os.path.getsize(espdl_bin_path)/1024.0:.1f} KB)")
     print(f"  • Human Ear Baseline                      : 81.30%")
     print(f"  • Efficiency Score                        : {int8_acc / (total_params/1000.0):.3f}% / kParam")
     print("=" * 80 + "\n")
