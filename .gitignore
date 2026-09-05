@@ -55,6 +55,11 @@ train_*.py
 !training/train_tcn_*.py
 !training/eval_*.py
 !training/qat_training.py
+!training/*fold5*.py
+!training/prepare_official_fold5_dataset.py
+!training/cache_official_fold5_features.py
+!export/*fold5*.py
+!export/quantize_*_to_espdl.py
 
 # Build Directories (Zephyr RTOS, CMake, ESP-IDF)
 build/
