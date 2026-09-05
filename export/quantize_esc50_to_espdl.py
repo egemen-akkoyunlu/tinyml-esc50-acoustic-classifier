@@ -397,13 +397,9 @@ def main():
         input_names=["input"],
         output_names=["output"],
         do_constant_folding=True,
+        dynamo=False,
     )
-    import onnx
-    from onnxsim import simplify
-    m_onnx = onnx.load(onnx_fp32_path)
-    m_sim, _ = simplify(m_onnx)
-    onnx.save(m_sim, onnx_fp32_path)
-    print(f"✅ Exported Simplified ONNX Graph to: {onnx_fp32_path}")
+    print(f"✅ Exported Clean Static ONNX Graph to: {onnx_fp32_path}")
 
     # =========================================================================
     # 5. RUN ESP-PPQ INT8 QUANTIZATION COMPILER
@@ -413,7 +409,6 @@ def main():
     print("=" * 80)
 
     quant_setting = QuantizationSettingFactory.espdl_setting()
-    quant_setting.fusion_setting.align_quantization = False
 
     quantized_ir = quantize_onnx_model(
         onnx_import_file=onnx_fp32_path,
