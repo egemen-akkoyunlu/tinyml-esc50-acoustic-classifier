@@ -57,15 +57,6 @@ All metrics measured live on physical silicon with real audio streams under offi
 
 ---
 
-## 📈 Confusion Matrix & Validation Results
-
-Below is the 50x50 multi-class confusion matrix evaluated on the 400 held-out test clips (8 clips per class across all 50 categories) under Karol Piczak's official cross-validation benchmark:
-
-<p align="center">
-  <img src="assets/confusion_matrix_91_5.png" alt="ESC-50 Confusion Matrix" width="720">
-</p>
-
----
 
 ## 🧠 Architectural Highlights
 
@@ -171,10 +162,6 @@ Unlike recurrent models (GRUs) that suffer from sequential state hysteresis unde
 ```text
 ├── fig_esc50_pareto_frontier.png           # Master Pareto Frontier (Latency vs. Accuracy vs. Flash)
 ├── fig_esc50_memory_latency_breakdown.png  # Physical SRAM Allocation & End-to-End Latency Breakdown
-├── INTERNSHIP_REPORT_LATEX_OVERLEAF.md     # Full 8-Page Overleaf IEEE-Format Internship Report
-│
-├── assets/
-│   └── confusion_matrix_91_5.png           # 50x50 Multi-Class Confusion Matrix
 │
 ├── models/
 │   ├── confusion_matrix_esp32_int8_clean_fold5.png # Official Fold-5 Clean Confusion Matrix
